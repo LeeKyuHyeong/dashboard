@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  dashboard:
+    image: ${DOCKERHUB_IMAGE:-dashboard-app}
+    build: .
+    container_name: dashboard-app
+    ports:
+      - "8085:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://db:3306/dashboard
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-changeme}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - dashboard-net
+
+  db:
+    image: mariadb:11
+    container_name: dashboard-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-changeme}
+      - MYSQL_DATABASE=dashboard
+    ports:
+      - "3311:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - dashboard-net
+
+volumes:
+  db-data:
+
+networks:
+  dashboard-net:

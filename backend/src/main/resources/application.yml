@@ -1,0 +1,65 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:3306/dashboard
+    username: root
+    password: placeholder
+    driver-class-name: org.mariadb.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
+  sql:
+    init:
+      mode: always
+      platform: mariadb
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:mem:dashboard;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  sql:
+    init:
+      mode: always
+      platform: h2
+
+---
+
+monitoring:
+  services:
+    - name: ITSM
+      projectSlug: itsm
+      healthUrl: http://localhost:8081/actuator/health
+      containerName: itsm-app
+    - name: Song Quiz
+      projectSlug: song-quiz
+      healthUrl: http://localhost:8082/actuator/health
+      containerName: songquiz-app
+    - name: KH Shop
+      projectSlug: kh-shop
+      healthUrl: http://localhost:8083/actuator/health
+      containerName: khshop-app
+  checkIntervalSeconds: 10
