@@ -3,7 +3,6 @@ version: '3.8'
 services:
   dashboard:
     image: ${DOCKERHUB_IMAGE:-dashboard-app}
-    build: .
     container_name: dashboard-app
     ports:
       - "8080:8080"

@@ -43,6 +43,8 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd ~/dashboard
+            export DOCKERHUB_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/dashboard:latest
+            export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             docker compose pull dashboard
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }} docker compose up -d dashboard
+            docker compose up -d dashboard
             docker image prune -f
