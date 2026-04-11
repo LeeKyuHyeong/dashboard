@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -32,14 +33,16 @@ public class HealthCheckService {
         String dockerStatus = "unknown";
         long uptimeSeconds = 0;
 
-        // Health check via HTTP
+        // Health check via HTTP — any HTTP response (including 4xx/5xx) means the process is alive.
+        // Only connection failure / timeout is treated as DOWN.
         long start = System.currentTimeMillis();
         try {
             ResponseEntity<String> response = restTemplate.getForEntity(service.getHealthUrl(), String.class);
             responseTime = System.currentTimeMillis() - start;
-            if (response.getStatusCode().is2xxSuccessful()) {
-                healthStatus = "UP";
-            }
+            healthStatus = "UP";
+        } catch (HttpStatusCodeException e) {
+            responseTime = System.currentTimeMillis() - start;
+            healthStatus = "UP";
         } catch (Exception e) {
             responseTime = System.currentTimeMillis() - start;
             log.debug("Health check failed for {}: {}", service.getName(), e.getMessage());
