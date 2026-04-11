@@ -52,14 +52,14 @@ monitoring:
   services:
     - name: ITSM
       projectSlug: itsm
-      healthUrl: http://host.docker.internal:8086/actuator/health
+      healthUrl: http://itsm-api:8080/actuator/health
       containerName: itsm-api
     - name: Song Quiz
       projectSlug: song-quiz
-      healthUrl: http://host.docker.internal:8082/actuator/health
+      healthUrl: http://host.docker.internal:8082/
       containerName: khgame-app
     - name: KH Shop
       projectSlug: kh-shop
-      healthUrl: http://host.docker.internal:8081/actuator/health
+      healthUrl: http://host.docker.internal:8081/
       containerName: khshop-app
   checkIntervalSeconds: 10

@@ -21,6 +21,7 @@ services:
     restart: unless-stopped
     networks:
       - dashboard-net
+      - itsm_backend
 
   db:
     image: mariadb:11
@@ -46,3 +47,5 @@ volumes:
 
 networks:
   dashboard-net:
+  itsm_backend:
+    external: true
