@@ -59,6 +59,7 @@ public class HealthCheckService {
         return ServiceStatus.builder()
                 .name(service.getName())
                 .projectSlug(service.getProjectSlug())
+                .containerName(service.getContainerName())
                 .status(healthStatus)
                 .responseTimeMs(responseTime)
                 .dockerStatus(dockerStatus)
