@@ -15,6 +15,7 @@ RUN gradle bootJar --no-daemon -q
 
 # Stage 3: Runtime
 FROM eclipse-temurin:17-jre-alpine
+RUN apk add --no-cache docker-cli
 WORKDIR /app
 COPY --from=backend-build /app/build/libs/*.jar app.jar
 EXPOSE 8080
