@@ -19,7 +19,7 @@ export default function ServiceCard({ service }) {
 
         <div className="service-card__metrics">
           <div className="service-card__row">
-            <span className="service-card__label">Response</span>
+            <span className="service-card__label">응답 시간</span>
             <span className="service-card__value">
               {service.responseTimeMs != null ? `${service.responseTimeMs}ms` : '—'}
             </span>
@@ -31,7 +31,7 @@ export default function ServiceCard({ service }) {
             </span>
           </div>
           <div className="service-card__row">
-            <span className="service-card__label">Uptime</span>
+            <span className="service-card__label">가동 시간</span>
             <span className="service-card__value">
               {formatUptime(service.uptimeSeconds)}
             </span>
@@ -43,7 +43,7 @@ export default function ServiceCard({ service }) {
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
           </svg>
-          Logs
+          로그
         </button>
       </div>
 

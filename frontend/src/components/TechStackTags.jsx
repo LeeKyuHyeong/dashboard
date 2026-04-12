@@ -3,7 +3,7 @@ export default function TechStackTags({ techStack }) {
 
   return (
     <div className="tech-stack-section">
-      <h2 className="section-title">Tech Stack</h2>
+      <h2 className="section-title">기술 스택</h2>
       <div className="tag-list tag-list--lg">
         {techStack.map((tech) => (
           <span key={tech} className="tag tag--lg">{tech}</span>

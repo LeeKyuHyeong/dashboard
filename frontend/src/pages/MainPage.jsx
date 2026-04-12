@@ -23,16 +23,16 @@ export default function MainPage() {
   return (
     <div className="container">
       <header className="page-header">
-        <h1 className="page-header__title">Dashboard</h1>
+        <h1 className="page-header__title">대시보드</h1>
         <div className="page-header__status">
           <span className={`status-dot ${connected ? 'status-dot--connected' : 'status-dot--disconnected'}`} />
-          {connected ? 'Live' : 'Disconnected'}
+          {connected ? '실시간' : '연결 끊김'}
         </div>
       </header>
 
       {/* Service Status */}
       <section className="section">
-        <h2 className="section-title">Service Status</h2>
+        <h2 className="section-title">서비스 상태</h2>
         <div className="grid grid--3">
           {services.length > 0
             ? services.map((svc) => <ServiceCard key={svc.name} service={svc} />)
@@ -49,7 +49,7 @@ export default function MainPage() {
 
       {/* Server Metrics */}
       <section className="section">
-        <h2 className="section-title">Server Metrics</h2>
+        <h2 className="section-title">서버 메트릭</h2>
         <div className="grid grid--3">
           {server ? (
             <>
@@ -60,14 +60,14 @@ export default function MainPage() {
                 value={server.cpuUsage}
               />
               <MetricCard
-                title="Memory"
+                title="메모리"
                 icon="&#x1F9E0;"
                 type="memory"
                 value={server.memoryUsedBytes}
                 total={server.memoryTotalBytes}
               />
               <MetricCard
-                title="Disk"
+                title="디스크"
                 icon="&#x1F4BE;"
                 type="disk"
                 value={server.diskUsedBytes}
@@ -87,7 +87,7 @@ export default function MainPage() {
 
       {/* Projects */}
       <section className="section">
-        <h2 className="section-title">Projects</h2>
+        <h2 className="section-title">프로젝트</h2>
         <div className="grid grid--3">
           {projects.map((proj) => (
             <ProjectCard key={proj.slug} project={proj} />

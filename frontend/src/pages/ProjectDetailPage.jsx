@@ -21,7 +21,7 @@ export default function ProjectDetailPage() {
         setLoading(false);
       })
       .catch(() => {
-        setError('Failed to load project.');
+        setError('프로젝트를 불러오지 못했습니다.');
         setLoading(false);
       });
   }, [slug]);
@@ -42,8 +42,8 @@ export default function ProjectDetailPage() {
     return (
       <div className="container">
         <div className="detail-error">
-          <p>{error || 'Project not found.'}</p>
-          <button className="btn btn--secondary" onClick={() => navigate('/')}>Back to Dashboard</button>
+          <p>{error || '프로젝트를 찾을 수 없습니다.'}</p>
+          <button className="btn btn--secondary" onClick={() => navigate('/')}>대시보드로 돌아가기</button>
         </div>
       </div>
     );
@@ -56,7 +56,7 @@ export default function ProjectDetailPage() {
           <line x1="19" y1="12" x2="5" y2="12" />
           <polyline points="12 19 5 12 12 5" />
         </svg>
-        Back
+        뒤로
       </button>
 
       <ProjectHeader project={project} />
@@ -64,7 +64,7 @@ export default function ProjectDetailPage() {
 
       {project.achievements && project.achievements.length > 0 && (
         <section className="section">
-          <h2 className="section-title">Achievements</h2>
+          <h2 className="section-title">주요 성과</h2>
           <div className="achievement-list">
             {project.achievements.map((ach, idx) => (
               <AchievementCard key={ach.id || idx} achievement={ach} index={idx} />
