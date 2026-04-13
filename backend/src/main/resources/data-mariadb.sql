@@ -2,13 +2,13 @@
 INSERT IGNORE INTO project (id, name, slug, description, tech_stack, demo_url, github_url, thumbnail_url, sort_order, created_at, updated_at) VALUES
 (1, 'ITSM', 'itsm', 'Vue.js 프론트엔드와 Spring Boot 백엔드로 구축한 IT 서비스 관리 시스템. IT 서비스 요청, 장애, 변경 사항을 체계적으로 관리합니다.',
  '["Vue.js", "Spring Boot", "MariaDB", "Docker"]',
- 'https://itsm.kyuhyeong.com', 'https://github.com/rbgud/itsm', NULL, 1, NOW(), NOW()),
+ 'https://itsm.kyuhyeong.com', 'https://github.com/rbgud/itsm', '/thumbnails/itsm.png', 1, NOW(), NOW()),
 (2, 'Song Quiz', 'song-quiz', '실시간 멀티플레이어 노래 맞추기 게임. 짧은 음악 클립을 듣고 누가 가장 빠르게 곡을 맞추는지 겨루는 게임입니다.',
  '["React", "Spring Boot", "WebSocket", "Redis", "Docker"]',
- 'https://game.kyuhyeong.com', 'https://github.com/rbgud/song-quiz', NULL, 2, NOW(), NOW()),
+ 'https://game.kyuhyeong.com', 'https://github.com/rbgud/song-quiz', '/thumbnails/song-quiz.png', 2, NOW(), NOW()),
 (3, 'KH Shop', 'kh-shop', '상품 카탈로그, 장바구니, 주문 관리, 결제 연동을 갖춘 풀스택 이커머스 플랫폼.',
  '["React", "Spring Boot", "MariaDB", "Redis", "Docker"]',
- 'https://shop.kyuhyeong.com', 'https://github.com/rbgud/kh-shop', NULL, 3, NOW(), NOW());
+ 'https://shop.kyuhyeong.com', 'https://github.com/rbgud/kh-shop', '/thumbnails/kh-shop.png', 3, NOW(), NOW());
 
 -- Insert achievements
 INSERT IGNORE INTO project_achievement (id, project_id, title, description, metric_value, sort_order, created_at) VALUES
