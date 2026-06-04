@@ -7,6 +7,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - TZ=Asia/Seoul
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_DATASOURCE_URL=jdbc:mariadb://db:3306/dashboard
       - SPRING_DATASOURCE_USERNAME=root
@@ -27,6 +28,7 @@ services:
     image: mariadb:11
     container_name: dashboard-db
     environment:
+      - TZ=Asia/Seoul
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-changeme}
       - MYSQL_DATABASE=dashboard
     ports:
