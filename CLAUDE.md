@@ -174,7 +174,7 @@ monitoring:
     - name: KH Shop
       projectSlug: kh-shop
       healthUrl: http://localhost:8083/actuator/health
-      containerName: khshop-app
+      containerName: shop-app
   checkIntervalSeconds: 10
 ```
 

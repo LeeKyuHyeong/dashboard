@@ -57,9 +57,9 @@ monitoring:
     - name: Song Quiz
       projectSlug: song-quiz
       healthUrl: http://host.docker.internal:8082/
-      containerName: khgame-app
+      containerName: quiz-app
     - name: KH Shop
       projectSlug: kh-shop
       healthUrl: http://host.docker.internal:8081/
-      containerName: khshop-app
+      containerName: shop-app
   checkIntervalSeconds: 10
