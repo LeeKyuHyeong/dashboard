@@ -165,15 +165,15 @@ monitoring:
   services:
     - name: ITSM
       projectSlug: itsm
-      healthUrl: http://localhost:8081/actuator/health
-      containerName: itsm-app
+      healthUrl: http://itsm-api:8080/actuator/health   # itsm_backend 네트워크 직결
+      containerName: itsm-api
     - name: Song Quiz
       projectSlug: song-quiz
-      healthUrl: http://localhost:8082/actuator/health
-      containerName: songquiz-app
+      healthUrl: https://game.kyuhyeong.com/            # 공개 도메인 체크 (127.0.0.1 바인딩 앱 포트는 host.docker.internal 로 접근 불가)
+      containerName: quiz-app
     - name: KH Shop
       projectSlug: kh-shop
-      healthUrl: http://localhost:8083/actuator/health
+      healthUrl: https://shop.kyuhyeong.com/
       containerName: shop-app
   checkIntervalSeconds: 10
 ```
