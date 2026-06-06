@@ -38,9 +38,9 @@ jobs:
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             set -e  # 중간 명령 실패가 마지막 명령 성공에 묻혀 job 이 초록이 되는 것 방지 (shop CI 침묵 실패 교훈, 2026-06-06)
             cd ~/dashboard
