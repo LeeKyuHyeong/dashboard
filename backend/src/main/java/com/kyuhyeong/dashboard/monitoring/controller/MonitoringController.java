@@ -14,6 +14,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class MonitoringController {
 
     private final SseEmitterService sseEmitterService;
+    private final MonitoringProperties props;
+    private final MonitoringDataHolder dataHolder;
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream() {
@@ -41,5 +43,12 @@ public class MonitoringController {
             log.warn("Docker not available for logs: {}", e.getMessage());
             return "Docker not available";
         }
+    }
+    @GetMapping("/health/self")
+    public ResponseEntity<Map<String, Object>> self() {
+        long age = dataHolder.getLastCheckedAgeSeconds();
+        boolean ok = age < props.getCheckIntervalSeconds() * 3L;
+        return ResponseEntity.status(ok ? 200 : 503)
+                .body(Map.of("ok", ok, "lastCheckAgeSec", age));
     }
 }

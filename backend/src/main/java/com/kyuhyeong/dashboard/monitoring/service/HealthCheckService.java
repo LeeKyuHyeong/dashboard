@@ -21,10 +21,34 @@ public class HealthCheckService {
     private final MonitoringDataHolder dataHolder;
 
     public void checkAll() {
-        for (MonitoringProperties.ServiceConfig service : monitoringProperties.getServices()) {
-            ServiceStatus status = checkService(service);
-            dataHolder.updateServiceStatus(service.getContainerName(), status);
+        List<String> names = props.getServices().stream()
+                .map(ServiceConfig::getContainerName).toList();
+        Map<String, String[]> snap = snapshotContainers(names);
+        for (ServiceConfig s : props.getServices()) {
+            dataHolder.updateServiceStatus(s.getContainerName(), checkService(s, snap));
         }
+    }
+
+    private Map<String, String[]> snapshotContainers(List<String> names) {
+        Map<String, String[]> result = new HashMap<>();
+        List<String> cmd = new ArrayList<>(List.of(
+                "docker", "inspect", "--format",
+                "{{.Name}}\t{{.State.Status}}\t{{.State.StartedAt}}"));
+        cmd.addAll(names);
+        Process p = null;
+        try {
+            p = new ProcessBuilder(cmd).start();          // redirectErrorStream 쓰지 않는다
+            byte[] out = p.getInputStream().readAllBytes();   // waitFor보다 먼저
+            if (!p.waitFor(3, TimeUnit.SECONDS)) { p.destroyForcibly(); return result; }
+            for (String line : new String(out).split("\n")) {
+                String[] f = line.trim().split("\t");
+                if (f.length == 3) result.put(f[0].replaceFirst("^/", ""), f);
+            }
+        } catch (Exception e) {
+            log.warn("docker inspect 실패: {}", e.getMessage());
+            if (p != null) p.destroyForcibly();
+        }
+        return result;
     }
 
     private ServiceStatus checkService(MonitoringProperties.ServiceConfig service) {
@@ -36,7 +60,22 @@ public class HealthCheckService {
         // Health check via HTTP — any HTTP response (including 4xx/5xx) means the process is alive.
         // Only connection failure / timeout is treated as DOWN.
         long start = System.currentTimeMillis();
-        try {
+        if (service.getHealthUrl() == null || service.getHealthUrl().isBlank()) {
+            healthStatus = "UNKNOWN";
+        } else {
+            try {
+                restTemplate.getForEntity(service.getHealthUrl(), String.class);
+                healthStatus = "UP";
+            } catch (HttpStatusCodeException e) {
+                healthStatus = e.getStatusCode().is5xxServerError() ? "DEGRADED" : "UP";
+            } catch (Exception e) {
+                healthStatus = "DOWN";
+                log.warn("Health check 실패 {}: {}", service.getName(), e.getMessage());
+            }
+            responseTime = System.currentTimeMillis() - start;
+        }
+
+        /*try {
             ResponseEntity<String> response = restTemplate.getForEntity(service.getHealthUrl(), String.class);
             responseTime = System.currentTimeMillis() - start;
             healthStatus = "UP";
@@ -46,7 +85,7 @@ public class HealthCheckService {
         } catch (Exception e) {
             responseTime = System.currentTimeMillis() - start;
             log.debug("Health check failed for {}: {}", service.getName(), e.getMessage());
-        }
+        }*/
 
         // Docker status - try to get container info
         try {

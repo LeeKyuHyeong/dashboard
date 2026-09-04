@@ -48,4 +48,9 @@ jobs:
             export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             docker compose pull dashboard
             docker compose up -d dashboard
+            for i in $(seq 45); do
+              curl -sf http://127.0.0.1:8080/api/monitoring/health/self >/dev/null && break
+              [ $i -eq 45 ] && { echo "기동 실패"; docker compose logs --tail 50 dashboard; exit 1; }
+              sleep 2
+            done
             docker image prune -f

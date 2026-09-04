@@ -14,11 +14,12 @@ public class MonitoringScheduler {
     private final ServerMetricService serverMetricService;
     private final SseEmitterService sseEmitterService;
 
-    @Scheduled(fixedDelayString = "#{${monitoring.check-interval-seconds:10} * 1000}")
+    @Scheduled(fixedDelayString = "#{@monitoringProperties.checkIntervalSeconds * 1000}")
     public void collectAndBroadcast() {
         try {
             healthCheckService.checkAll();
             serverMetricService.collect();
+            dataHolder.markChecked();        // broadcast 앞에 — SSE가 막혀도 판정은 끝난 것
             sseEmitterService.broadcast();
         } catch (Exception e) {
             log.error("Error during monitoring collection: {}", e.getMessage(), e);

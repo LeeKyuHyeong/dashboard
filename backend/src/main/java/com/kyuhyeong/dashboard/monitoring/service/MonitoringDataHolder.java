@@ -15,6 +15,7 @@ public class MonitoringDataHolder {
 
     private final ConcurrentHashMap<String, ServiceStatus> serviceStatuses = new ConcurrentHashMap<>();
     private volatile ServerMetric serverMetric;
+    private volatile Instant lastCheckedAt = Instant.now();   // 기동 시각으로 초기화
 
     public void updateServiceStatus(String containerName, ServiceStatus status) {
         serviceStatuses.put(containerName, status);
@@ -27,5 +28,11 @@ public class MonitoringDataHolder {
     public MonitoringData getAll() {
         List<ServiceStatus> services = new ArrayList<>(serviceStatuses.values());
         return new MonitoringData(services, serverMetric, LocalDateTime.now());
+    }
+
+    public void markChecked() { this.lastCheckedAt = Instant.now(); }
+
+    public long getLastCheckedAgeSeconds() {
+        return Duration.between(lastCheckedAt, Instant.now()).getSeconds();
     }
 }

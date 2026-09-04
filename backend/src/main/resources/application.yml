@@ -52,7 +52,7 @@ monitoring:
   services:
     - name: ITSM
       projectSlug: itsm
-      healthUrl: http://itsm-api:8080/actuator/health
+      healthUrl: ""
       containerName: itsm-api
     # quiz/shop 은 nginx 공개 도메인으로 체크 — 앱 포트가 127.0.0.1 바인딩이면
     # host.docker.internal(호스트 게이트웨이)로는 못 붙음 (shop 이 그 케이스, 2026-06-06)
@@ -62,6 +62,6 @@ monitoring:
       containerName: quiz-app
     - name: KH Shop
       projectSlug: kh-shop
-      healthUrl: https://shop.kyuhyeong.com/
+      healthUrl: ""
       containerName: shop-app
-  checkIntervalSeconds: 10
+  checkIntervalSeconds: 60
