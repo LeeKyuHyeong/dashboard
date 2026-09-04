@@ -6,6 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import com.kyuhyeong.dashboard.monitoring.config.MonitoringProperties;
+import com.kyuhyeong.dashboard.monitoring.service.MonitoringDataHolder;
+import org.springframework.http.ResponseEntity;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/monitoring")
