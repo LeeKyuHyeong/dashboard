@@ -60,8 +60,8 @@ monitoring:
       projectSlug: song-quiz
       healthUrl: https://game.kyuhyeong.com/
       containerName: quiz-app
-    - name: KH Shop
-      projectSlug: kh-shop
+    - name: Account
+      projectSlug: account
       healthUrl: ""
-      containerName: shop-app
+      containerName: account-api
   checkIntervalSeconds: 60
