@@ -13,6 +13,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.time.Duration;
+import java.time.Instant;
 
 import java.time.LocalDateTime;
 
@@ -26,10 +28,11 @@ public class HealthCheckService {
     private final MonitoringDataHolder dataHolder;
 
     public void checkAll() {
-        List<String> names = props.getServices().stream()
-                .map(ServiceConfig::getContainerName).toList();
+        List<String> names = monitoringProperties.getServices().stream()
+                .map(MonitoringProperties.ServiceConfig::getContainerName)
+                .toList();
         Map<String, String[]> snap = snapshotContainers(names);
-        for (ServiceConfig s : props.getServices()) {
+        for (MonitoringProperties.ServiceConfig s : monitoringProperties.getServices()) {
             dataHolder.updateServiceStatus(s.getContainerName(), checkService(s, snap));
         }
     }
@@ -56,20 +59,20 @@ public class HealthCheckService {
         return result;
     }
 
-    private ServiceStatus checkService(MonitoringProperties.ServiceConfig service) {
-        String healthStatus = "DOWN";
+    private ServiceStatus checkService(MonitoringProperties.ServiceConfig service,
+                                       Map<String, String[]> snap) {
+        String healthStatus;
         long responseTime = 0;
         String dockerStatus = "unknown";
         long uptimeSeconds = 0;
 
-        // Health check via HTTP — any HTTP response (including 4xx/5xx) means the process is alive.
-        // Only connection failure / timeout is treated as DOWN.
-        long start = System.currentTimeMillis();
-        if (service.getHealthUrl() == null || service.getHealthUrl().isBlank()) {
-            healthStatus = "UNKNOWN";
+        String url = service.getHealthUrl();
+        if (url == null || url.isBlank()) {
+            healthStatus = "UNKNOWN";              // 체크 수단 없음. UP으로 위장하지 않는다
         } else {
+            long start = System.currentTimeMillis();
             try {
-                restTemplate.getForEntity(service.getHealthUrl(), String.class);
+                restTemplate.getForEntity(url, String.class);
                 healthStatus = "UP";
             } catch (HttpStatusCodeException e) {
                 healthStatus = e.getStatusCode().is5xxServerError() ? "DEGRADED" : "UP";
@@ -80,24 +83,12 @@ public class HealthCheckService {
             responseTime = System.currentTimeMillis() - start;
         }
 
-        /*try {
-            ResponseEntity<String> response = restTemplate.getForEntity(service.getHealthUrl(), String.class);
-            responseTime = System.currentTimeMillis() - start;
-            healthStatus = "UP";
-        } catch (HttpStatusCodeException e) {
-            responseTime = System.currentTimeMillis() - start;
-            healthStatus = "UP";
-        } catch (Exception e) {
-            responseTime = System.currentTimeMillis() - start;
-            log.debug("Health check failed for {}: {}", service.getName(), e.getMessage());
-        }*/
-
-        // Docker status - try to get container info
-        try {
-            dockerStatus = getDockerContainerStatus(service.getContainerName());
-            uptimeSeconds = getDockerContainerUptime(service.getContainerName());
-        } catch (Exception e) {
-            log.debug("Docker check failed for {}: {}", service.getContainerName(), e.getMessage());
+        String[] f = snap.get(service.getContainerName());
+        if (f != null) {
+            dockerStatus = f[1];
+            try {
+                uptimeSeconds = Duration.between(Instant.parse(f[2]), Instant.now()).getSeconds();
+            } catch (Exception ignored) { }
         }
 
         return ServiceStatus.builder()
