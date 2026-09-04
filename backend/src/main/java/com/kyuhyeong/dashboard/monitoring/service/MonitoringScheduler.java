@@ -13,8 +13,9 @@ public class MonitoringScheduler {
     private final HealthCheckService healthCheckService;
     private final ServerMetricService serverMetricService;
     private final SseEmitterService sseEmitterService;
+    private final MonitoringDataHolder dataHolder;
 
-    @Scheduled(fixedDelayString = "#{@monitoringProperties.checkIntervalSeconds * 1000}")
+    @Scheduled(fixedDelayString = "${monitoring.check-interval-seconds:60}000")
     public void collectAndBroadcast() {
         try {
             healthCheckService.checkAll();
