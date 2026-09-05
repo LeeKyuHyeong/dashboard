@@ -12,9 +12,10 @@ public class ServiceStatus {
     private String name;
     private String projectSlug;
     private String containerName;
-    private String status;          // "UP" or "DOWN"
-    private Long responseTimeMs;
-    private String dockerStatus;    // "running", "stopped", etc.
+    /** UP(running) / DOWN(존재하나 미기동) / MISSING(삭제됨) / UNKNOWN(판정 불가) */
+    private String status;
+    /** docker 가 보고한 원문 상태: running, exited, restarting, none, unknown */
+    private String dockerStatus;
     private Long uptimeSeconds;
     private LocalDateTime checkedAt;
 }

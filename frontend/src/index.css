@@ -263,6 +263,12 @@ button {
   color: var(--color-danger);
 }
 
+.badge--unknown {
+  color: var(--text-secondary);
+  background: rgba(160, 160, 176, 0.12);
+  border: 1px solid rgba(160, 160, 176, 0.25);
+}
+
 /* ===== Buttons ===== */
 .btn {
   display: inline-flex;

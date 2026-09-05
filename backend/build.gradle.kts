@@ -28,11 +28,10 @@ dependencies {
     // System monitoring
     implementation("com.github.oshi:oshi-core:6.4.0")
 
-    // Docker API
-    implementation("com.github.docker-java:docker-java-core:3.3.4")
-    implementation("com.github.docker-java:docker-java-transport-httpclient5:3.3.4")
-    implementation("org.apache.httpcomponents.client5:httpclient5:5.3.1")
-    implementation("org.apache.httpcomponents.core5:httpcore5-h2:5.2.5")
+    // Docker 는 docker CLI 서브프로세스로 호출한다(Dockerfile 에 docker-cli 설치).
+    // docker-java 는 선언만 되어 있고 코드에서 쓰인 적이 없어 제거(2026-09-05).
+    // 딸려오던 httpclient5 가 RestTemplate 의 기본 클라이언트로 잡혀
+    // 감시 대상 nginx 로그에 "Apache-HttpClient/5.3.1" UA 를 남기던 경로도 함께 사라진다.
 
     // Database
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client")

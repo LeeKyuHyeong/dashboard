@@ -22,7 +22,6 @@ public class MonitoringProperties {
     public static class ServiceConfig {
         private String name;
         private String projectSlug;
-        private String healthUrl;
         private String containerName;
     }
 }

@@ -51,6 +51,15 @@ public class MonitoringDataHolder {
         this.lastFailureReason = reason;
     }
 
+    /**
+     * 사이클은 끝까지 돌았지만 판정 근거를 얻지 못한 경우(docker 조회 실패 등).
+     * lastCheckedAt 을 <b>갱신하지 않는다</b> — 돌긴 돌았으니 200 을 주면
+     * "판정 불가"가 "정상"으로 위장된다.
+     */
+    public void markUndecidable(String reason) {
+        this.lastFailureReason = reason;
+    }
+
     /** @return 마지막 성공 사이클로부터 경과 초. 아직 한 번도 완주하지 못했으면 null. */
     public Long getLastCheckedAgeSeconds() {
         Instant at = this.lastCheckedAt;

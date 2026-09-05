@@ -5,28 +5,29 @@ import LogModal from './LogModal';
 export default function ServiceCard({ service }) {
   const [logOpen, setLogOpen] = useState(false);
 
-  const isUp = service.status === 'UP';
+  // 판정은 컨테이너 상태 단일. UNKNOWN(판정 불가)을 UP/DOWN 어느 쪽으로도 칠하지 않는다.
+  const badgeClass =
+    service.status === 'UP' ? 'badge--up'
+    : service.status === 'UNKNOWN' ? 'badge--unknown'
+    : 'badge--down';
 
   return (
     <>
       <div className="card service-card">
         <div className="service-card__header">
           <h3 className="service-card__name">{service.name}</h3>
-          <span className={`badge ${isUp ? 'badge--up' : 'badge--down'}`}>
+          <span className={`badge ${badgeClass}`}>
             {service.status}
           </span>
         </div>
 
         <div className="service-card__metrics">
           <div className="service-card__row">
-            <span className="service-card__label">응답 시간</span>
-            <span className="service-card__value">
-              {service.responseTimeMs != null ? `${service.responseTimeMs}ms` : '—'}
-            </span>
-          </div>
-          <div className="service-card__row">
             <span className="service-card__label">Docker</span>
-            <span className={`service-card__value ${service.dockerStatus === 'running' ? 'text-green' : 'text-red'}`}>
+            <span className={`service-card__value ${
+              service.dockerStatus === 'running' ? 'text-green'
+              : service.dockerStatus === 'unknown' ? ''
+              : 'text-red'}`}>
               {service.dockerStatus || '—'}
             </span>
           </div>

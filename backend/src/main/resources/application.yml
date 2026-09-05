@@ -52,23 +52,19 @@ spring:
 ---
 
 monitoring:
+  # 화면 카드용 목록. 판정은 컨테이너 상태 단일 — HTTP 폴링은 하지 않는다.
+  # (공개 도메인 폴링은 nginx·TLS·앱을 뭉뚱그려 "무엇이 죽었나"를 못 알려줬고,
+  #  UptimeRobot 과 중복이며, 감시 대상에 자가 트래픽을 얹었다. 2026-09-05 제거)
   services:
     - name: ITSM
       projectSlug: itsm
-      healthUrl: ""
       containerName: itsm-api
-    # quiz 는 nginx 공개 도메인으로 체크 — 앱 포트가 127.0.0.1 바인딩이라
-    # host.docker.internal(호스트 게이트웨이)로는 못 붙음 (2026-06-06)
-    # TODO: 홈페이지 전체 GET 이라 응답이 큼 — quiz 에 경량 헬스 엔드포인트 생기면 교체
     - name: Song Quiz
       projectSlug: song-quiz
-      healthUrl: https://game.kyuhyeong.com/
       containerName: quiz-app
-    # kh-shop 자리에 Account 투입 (2026-07-23 shop 서비스 종료).
-    # shop 의 공개 도메인 10초 폴링이 홈페이지 HTML 을 매번 통째로 받아
-    # 47일간 24.4GB 아웃바운드를 만든 원인이었음 — 간격도 10→60s 로 완화.
     - name: Account
       projectSlug: account
-      healthUrl: ""
       containerName: account-api
+  # 키는 camelCase 그대로 둔다 — MonitoringProperties(@ConfigurationProperties) 가 유일한 독자다.
+  # ${monitoring.check-interval-seconds} 같은 플레이스홀더로 읽지 말 것(relaxed binding 미적용).
   checkIntervalSeconds: 60

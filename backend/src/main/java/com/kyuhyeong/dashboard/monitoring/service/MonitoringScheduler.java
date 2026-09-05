@@ -39,9 +39,14 @@ public class MonitoringScheduler implements SchedulingConfigurer {
 
     public void collectAndBroadcast() {
         try {
-            healthCheckService.checkAll();
+            boolean decidable = healthCheckService.checkAll();
             serverMetricService.collect();
-            dataHolder.markChecked();        // broadcast 앞에 — SSE가 막혀도 판정은 끝난 것
+            // markChecked/markUndecidable 는 broadcast 앞에 — SSE가 막혀도 판정은 끝난 것
+            if (decidable) {
+                dataHolder.markChecked();
+            } else {
+                dataHolder.markUndecidable("DOCKER_UNAVAILABLE");
+            }
             sseEmitterService.broadcast();
         } catch (Exception e) {
             // markChecked() 에 도달하지 못했으므로 lastCheckedAt 은 갱신되지 않는다.
