@@ -1,6 +1,7 @@
 package com.kyuhyeong.dashboard.monitoring.service;
 
 import com.kyuhyeong.dashboard.monitoring.config.MonitoringProperties;
+import com.kyuhyeong.dashboard.monitoring.model.MonitoringInventory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
@@ -37,6 +38,21 @@ public class MonitoringScheduler implements SchedulingConfigurer {
         registrar.addFixedDelayTask(this::collectAndBroadcast, Duration.ofSeconds(seconds));
     }
 
+    /**
+     * 이상만 남긴다. 다음 단계에서 <b>상태 전이</b>로 바꿀 자리 — 지금은 이상이 지속되는 동안
+     * 매 사이클 찍히므로 조용해지는 것이 곧 정상이라는 뜻은 아니다.
+     */
+    private void logAnomalies() {
+        MonitoringInventory inv = dataHolder.getInventory();
+        if (!inv.hasAnomaly()) return;
+        if (!inv.notUp().isEmpty()) {
+            log.warn("expected 이상: {}", String.join(", ", inv.notUp()));
+        }
+        if (!inv.unexpected().isEmpty()) {
+            log.warn("unexpected 실행 중(목록에 없음): {}", String.join(", ", inv.unexpected()));
+        }
+    }
+
     public void collectAndBroadcast() {
         try {
             boolean decidable = healthCheckService.checkAll();
@@ -44,6 +60,7 @@ public class MonitoringScheduler implements SchedulingConfigurer {
             // markChecked/markUndecidable 는 broadcast 앞에 — SSE가 막혀도 판정은 끝난 것
             if (decidable) {
                 dataHolder.markChecked();
+                logAnomalies();
             } else {
                 dataHolder.markUndecidable("DOCKER_UNAVAILABLE");
             }

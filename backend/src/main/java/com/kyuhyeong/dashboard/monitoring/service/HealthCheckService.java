@@ -1,7 +1,9 @@
 package com.kyuhyeong.dashboard.monitoring.service;
 
 import com.kyuhyeong.dashboard.monitoring.config.MonitoringProperties;
+import com.kyuhyeong.dashboard.monitoring.model.MonitoringInventory;
 import com.kyuhyeong.dashboard.monitoring.model.ServiceStatus;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -11,6 +13,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +34,25 @@ public class HealthCheckService {
 
     private final MonitoringProperties monitoringProperties;
     private final MonitoringDataHolder dataHolder;
+
+    /**
+     * 기동 시 목록을 한 번 검증한다. 화면 카드가 가리키는 컨테이너가 판정 대상에 없으면
+     * 카드는 그려지는데 이상 감지는 안 되는 상태가 되므로 즉시 알린다.
+     */
+    @PostConstruct
+    void validateLists() {
+        List<String> expected = monitoringProperties.getExpected();
+        log.info("판정 대상 {}개, 의도적 제외 {}개, 화면 카드 {}개",
+                expected.size(), monitoringProperties.getIgnored().size(),
+                monitoringProperties.getServices().size());
+        if (expected.isEmpty()) {
+            log.warn("monitoring.expected 가 비어 있다 — 양방향 비교가 무의미해진다");
+        }
+        monitoringProperties.getServices().stream()
+                .map(MonitoringProperties.ServiceConfig::getContainerName)
+                .filter(n -> !expected.contains(n))
+                .forEach(n -> log.warn("화면 카드 컨테이너 {} 가 monitoring.expected 에 없다 — 카드는 뜨지만 이상 감지는 안 된다", n));
+    }
 
     /** 컨테이너 1건의 실측 상태. */
     public record ContainerState(String name, String dockerStatus, Instant startedAt) {}
@@ -54,7 +76,44 @@ public class HealthCheckService {
         for (MonitoringProperties.ServiceConfig s : monitoringProperties.getServices()) {
             dataHolder.updateServiceStatus(s.getContainerName(), toStatus(s, snapshot));
         }
+        dataHolder.updateInventory(compare(snapshot));
         return snapshot.available();
+    }
+
+    /**
+     * 기대 목록과 실측을 <b>양방향</b>으로 대조한다.
+     * <ul>
+     *   <li>목록에 있는데 실행 중이 아님 → 이상 (MISSING / DOWN)</li>
+     *   <li>목록에 없는데 실행 중 → 경고 (unexpected)</li>
+     * </ul>
+     * 두 번째 방향이 이 비교의 핵심이다. 없으면 새 앱을 올리고 목록 갱신을 잊었을 때
+     * 감시에서 조용히 빠지고, 그 사실을 알려줄 주체가 아무도 없다.
+     */
+    private MonitoringInventory compare(DockerSnapshot snapshot) {
+        if (!snapshot.available()) {
+            return MonitoringInventory.undecidable();
+        }
+
+        Map<String, String> expectedStates = new LinkedHashMap<>();
+        for (String name : monitoringProperties.getExpected()) {
+            ContainerState state = snapshot.byName().get(name);
+            if (state == null) {
+                expectedStates.put(name, "MISSING");
+            } else {
+                expectedStates.put(name, "running".equals(state.dockerStatus()) ? "UP" : "DOWN");
+            }
+        }
+
+        // 실행 중인 것만 본다. 멈춰 있는 낯선 컨테이너까지 경고하면 잔재만으로 시끄러워진다.
+        List<String> unexpected = snapshot.byName().values().stream()
+                .filter(c -> "running".equals(c.dockerStatus()))
+                .map(ContainerState::name)
+                .filter(n -> !monitoringProperties.getExpected().contains(n))
+                .filter(n -> !monitoringProperties.getIgnored().contains(n))
+                .sorted()
+                .toList();
+
+        return new MonitoringInventory(true, expectedStates, unexpected);
     }
 
     /**

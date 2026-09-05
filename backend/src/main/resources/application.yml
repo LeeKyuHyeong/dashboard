@@ -65,6 +65,24 @@ monitoring:
     - name: Account
       projectSlug: account
       containerName: account-api
+  # 판정 대상 전체(11개, 2026-09-05 docker ps -a 실측 기준).
+  # 화면 카드(services)와 다른 목록이다 — DB 카드를 그릴 이유는 없지만 DB가 죽은 건 알아야 한다.
+  expected:
+    - dashboard-app
+    - dashboard-db
+    - quiz-app
+    - quiz-db
+    - itsm-api
+    - itsm-batch
+    - itsm-frontend
+    - itsm-db
+    - itsm-fail2ban
+    - account-api
+    - account-db
+  # 의도적 제외. 실행 중이어도 unexpected 경고를 내지 않는다. 사유를 반드시 남길 것.
+  ignored:
+    - house-app     # 청약 관련 웹사이트, 추후 구축 예정 — 2026-09-04 down
+    - house-db      # 〃
   # 키는 camelCase 그대로 둔다 — MonitoringProperties(@ConfigurationProperties) 가 유일한 독자다.
   # ${monitoring.check-interval-seconds} 같은 플레이스홀더로 읽지 말 것(relaxed binding 미적용).
   checkIntervalSeconds: 60

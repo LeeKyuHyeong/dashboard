@@ -1,6 +1,7 @@
 package com.kyuhyeong.dashboard.monitoring.service;
 
 import com.kyuhyeong.dashboard.monitoring.model.MonitoringData;
+import com.kyuhyeong.dashboard.monitoring.model.MonitoringInventory;
 import com.kyuhyeong.dashboard.monitoring.model.ServerMetric;
 import com.kyuhyeong.dashboard.monitoring.model.ServiceStatus;
 import org.springframework.stereotype.Component;
@@ -40,6 +41,17 @@ public class MonitoringDataHolder {
     public MonitoringData getAll() {
         List<ServiceStatus> services = new ArrayList<>(serviceStatuses.values());
         return new MonitoringData(services, serverMetric, LocalDateTime.now());
+    }
+
+    /** 직전 사이클의 양방향 비교 결과. 전이 판정(다음 단계)이 이 값을 이전 값과 비교한다. */
+    private volatile MonitoringInventory inventory = MonitoringInventory.undecidable();
+
+    public void updateInventory(MonitoringInventory inventory) {
+        this.inventory = inventory;
+    }
+
+    public MonitoringInventory getInventory() {
+        return this.inventory;
     }
 
     public void markChecked() {
