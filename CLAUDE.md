@@ -254,10 +254,18 @@ GET /api/monitoring/health/self
 - emitter 타임아웃 5분(유한값), 동시 연결 상한 40, emitter 개별 예외 격리
 - `markChecked()` 는 `broadcast()` **앞** — SSE 가 막혀도 판정은 끝난 것
 
-### ⚠️ `/api/monitoring/logs/{containerName}` 는 무인증 공개
+### ⚠️ `/api/monitoring/logs/{containerName}` 는 앱 레벨 인증이 없다
 
-앱에 인증이 없다. **호스트 nginx 에서 관리 IP 로 제한**한다(DB 포트 화이트리스트와 동일 정책).
-앱 레벨 인증 분리는 2단계.
+앱에는 Spring Security 가 없어 `/api/**` 전부 무인증이다. 이 경로만은 컨테이너 로그 전문을
+반환하므로 **호스트 nginx 가 차단하고 있다** (`dashboard.conf`):
+
+```nginx
+location ^~ /api/monitoring/logs { return 404; }
+```
+
+관리 IP 만 허용하려면 이 줄을 `allow`/`deny` 블록 + `proxy_pass` 로 교체한다.
+**앱 레벨 인증 분리는 2단계.** 앱 코드만 보고 노출 여부를 판단하지 말 것 — 실제 상태는
+`cat /etc/nginx/conf.d/dashboard.conf` 로 확인한다.
 
 ---
 
