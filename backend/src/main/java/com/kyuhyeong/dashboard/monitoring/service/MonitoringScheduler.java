@@ -29,6 +29,7 @@ public class MonitoringScheduler implements SchedulingConfigurer {
     private final SseEmitterService sseEmitterService;
     private final MonitoringDataHolder dataHolder;
     private final MonitoringProperties properties;
+    private final TransitionService transitionService;
 
     @Override
     public void configureTasks(ScheduledTaskRegistrar registrar) {
@@ -39,17 +40,13 @@ public class MonitoringScheduler implements SchedulingConfigurer {
     }
 
     /**
-     * 이상만 남긴다. 다음 단계에서 <b>상태 전이</b>로 바꿀 자리 — 지금은 이상이 지속되는 동안
-     * 매 사이클 찍히므로 조용해지는 것이 곧 정상이라는 뜻은 아니다.
+     * 전이만 남긴다. 이상이 지속되는 동안 로그는 조용하다 — <b>조용한 것이 정상이라는 뜻은
+     * 아니다.</b> 지속 상태는 서비스 카드와 /health/self 로 본다.
      */
-    private void logAnomalies() {
+    private void logTransitions() {
         MonitoringInventory inv = dataHolder.getInventory();
-        if (!inv.hasAnomaly()) return;
-        if (!inv.notUp().isEmpty()) {
-            log.warn("expected 이상: {}", String.join(", ", inv.notUp()));
-        }
-        if (!inv.unexpected().isEmpty()) {
-            log.warn("unexpected 실행 중(목록에 없음): {}", String.join(", ", inv.unexpected()));
+        for (String t : transitionService.evaluate(inv)) {
+            log.warn("전이: {}", t);
         }
     }
 
@@ -60,7 +57,7 @@ public class MonitoringScheduler implements SchedulingConfigurer {
             // markChecked/markUndecidable 는 broadcast 앞에 — SSE가 막혀도 판정은 끝난 것
             if (decidable) {
                 dataHolder.markChecked();
-                logAnomalies();
+                logTransitions();
             } else {
                 dataHolder.markUndecidable("DOCKER_UNAVAILABLE");
             }
