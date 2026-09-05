@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 판정은 <b>컨테이너 상태 단일</b>이다. HTTP 폴링은 쓰지 않는다.
@@ -30,10 +29,11 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class HealthCheckService {
 
-    private static final int DOCKER_TIMEOUT_SECONDS = 3;
+    private static final Duration DOCKER_TIMEOUT = Duration.ofSeconds(3);
 
     private final MonitoringProperties monitoringProperties;
     private final MonitoringDataHolder dataHolder;
+    private final DockerCli docker;
 
     /**
      * 기동 시 목록을 한 번 검증한다. 화면 카드가 가리키는 컨테이너가 판정 대상에 없으면
@@ -123,7 +123,8 @@ public class HealthCheckService {
      * 열거({@code docker ps -a})는 데몬이 살아 있으면 exit 0 이므로 그 구분이 성립한다.
      */
     public DockerSnapshot snapshot() {
-        Exec listed = exec(List.of("docker", "ps", "-a", "--format", "{{.Names}}"));
+        DockerCli.Result listed = docker.exec(
+                List.of("docker", "ps", "-a", "--format", "{{.Names}}"), DOCKER_TIMEOUT);
         if (!listed.ok()) {
             log.warn("docker 열거 실패 — 판정 불가: {}", listed.diagnostic());
             return new DockerSnapshot(false, Map.of());
@@ -141,7 +142,7 @@ public class HealthCheckService {
 
         // 일부 이름이 그사이 사라지면 exit 1 이지만 나머지는 stdout 에 그대로 나온다.
         // 그래서 exit code 가 아니라 파싱된 행으로 판단한다.
-        Exec detail = exec(cmd);
+        DockerCli.Result detail = docker.exec(cmd, DOCKER_TIMEOUT);
         Map<String, ContainerState> byName = new HashMap<>();
         for (String line : detail.lines()) {
             String[] f = line.split("\t");
@@ -191,37 +192,4 @@ public class HealthCheckService {
                 .build();
     }
 
-    private record Exec(boolean started, boolean timedOut, int exitCode, String stdout, String stderr) {
-        boolean ok() {
-            return started && !timedOut && exitCode == 0;
-        }
-
-        List<String> lines() {
-            if (stdout == null || stdout.isBlank()) return List.of();
-            return stdout.lines().map(String::trim).filter(l -> !l.isEmpty()).toList();
-        }
-
-        String diagnostic() {
-            if (!started) return "docker 실행 불가";
-            if (timedOut) return "docker 응답 없음(" + DOCKER_TIMEOUT_SECONDS + "s 초과)";
-            return "exit " + exitCode + (stderr == null || stderr.isBlank() ? "" : " / " + stderr.trim());
-        }
-    }
-
-    private Exec exec(List<String> cmd) {
-        Process p = null;
-        try {
-            p = new ProcessBuilder(cmd).start();      // stderr 를 stdout 에 섞지 않는다 — 진단이 데이터를 오염시킨다
-            String out = new String(p.getInputStream().readAllBytes());
-            String err = new String(p.getErrorStream().readAllBytes());
-            if (!p.waitFor(DOCKER_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                p.destroyForcibly();
-                return new Exec(true, true, -1, out, err);
-            }
-            return new Exec(true, false, p.exitValue(), out, err);
-        } catch (Exception e) {
-            if (p != null) p.destroyForcibly();
-            return new Exec(false, false, -1, "", e.getMessage());
-        }
-    }
 }

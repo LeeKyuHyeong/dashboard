@@ -7,9 +7,13 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.kyuhyeong.dashboard.monitoring.config.MonitoringProperties;
+import com.kyuhyeong.dashboard.monitoring.service.DockerCli;
 import com.kyuhyeong.dashboard.monitoring.service.MonitoringDataHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -18,37 +22,45 @@ import java.util.Map;
 @Slf4j
 public class MonitoringController {
 
+    private static final Duration LOG_TIMEOUT = Duration.ofSeconds(10);
+    private static final int MAX_LOG_TAIL = 1000;
+
     private final SseEmitterService sseEmitterService;
     private final MonitoringProperties props;
     private final MonitoringDataHolder dataHolder;
+    private final DockerCli docker;
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream() {
         return sseEmitterService.createEmitter();
     }
 
+    /**
+     * ⚠ 이 경로는 무인증 공개다. 컨테이너 로그 전문을 반환하므로
+     * <b>호스트 nginx 에서 관리 IP 로 제한</b>한 상태를 전제한다(앱 레벨 인증은 2단계).
+     * 서브프로세스 호출에는 유한 타임아웃이 걸린다 — 이전 구현은 Tomcat 워커 스레드에서
+     * readAllBytes()/waitFor() 를 무한 대기했다.
+     */
     @GetMapping("/logs/{containerName}")
-    public String getLogs(
+    public ResponseEntity<String> getLogs(
             @PathVariable String containerName,
             @RequestParam(defaultValue = "100") int tail
     ) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder(
-                    "docker", "logs", "--tail", String.valueOf(tail), containerName
-            );
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            String output = new String(process.getInputStream().readAllBytes());
-            int exitCode = process.waitFor();
-            if (exitCode == 0) {
-                return output;
-            }
-            return "Failed to retrieve logs (exit code: " + exitCode + "): " + output;
-        } catch (Exception e) {
-            log.warn("Docker not available for logs: {}", e.getMessage());
-            return "Docker not available";
+        int safeTail = Math.max(1, Math.min(tail, MAX_LOG_TAIL));
+        DockerCli.Result result = docker.exec(
+                List.of("docker", "logs", "--tail", String.valueOf(safeTail), containerName),
+                LOG_TIMEOUT);
+
+        if (result.ok()) {
+            // 앱 로그는 stderr 로도 나온다. 성공한 호출에서만 둘을 합친다.
+            return ResponseEntity.ok(result.stdout() + result.stderr());
         }
+        log.warn("로그 조회 실패 {}: {}", containerName, result.diagnostic());
+        // 실패를 200 으로 감싸면 화면에서 로그 본문과 구분되지 않는다.
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body("로그를 가져오지 못했습니다 (" + result.diagnostic() + ")");
     }
+
     /**
      * dashboard 자신의 판정 루프가 살아 있는지만 답한다. UptimeRobot 이 5분마다 친다.
      * <ul>
