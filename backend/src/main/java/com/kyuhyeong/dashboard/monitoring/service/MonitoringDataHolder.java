@@ -5,19 +5,29 @@ import com.kyuhyeong.dashboard.monitoring.model.ServerMetric;
 import com.kyuhyeong.dashboard.monitoring.model.ServiceStatus;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.time.Duration;
-import java.time.Instant;
 
 @Component
 public class MonitoringDataHolder {
 
     private final ConcurrentHashMap<String, ServiceStatus> serviceStatuses = new ConcurrentHashMap<>();
     private volatile ServerMetric serverMetric;
-    private volatile Instant lastCheckedAt = Instant.now();   // 기동 시각으로 초기화
+
+    /**
+     * 마지막으로 판정 사이클이 <b>성공</b>한 시각. null 이면 기동 후 한 번도 완주하지 못한 것.
+     * <p>기동 시각으로 초기화하지 않는다 — 그렇게 하면 루프가 한 번도 돌지 않아도
+     * 최초 (checkIntervalSeconds x 3)초 동안 200 을 주게 되고, 배포 게이트가
+     * "컨텍스트만 뜨면 초록"이 된다(거짓 초록).
+     */
+    private volatile Instant lastCheckedAt;
+
+    /** 직전 사이클이 예외로 끝난 사유. null 이면 정상. 사이클이 성공하면 지워진다. */
+    private volatile String lastFailureReason;
 
     public void updateServiceStatus(String containerName, ServiceStatus status) {
         serviceStatuses.put(containerName, status);
@@ -32,9 +42,22 @@ public class MonitoringDataHolder {
         return new MonitoringData(services, serverMetric, LocalDateTime.now());
     }
 
-    public void markChecked() { this.lastCheckedAt = Instant.now(); }
+    public void markChecked() {
+        this.lastCheckedAt = Instant.now();
+        this.lastFailureReason = null;
+    }
 
-    public long getLastCheckedAgeSeconds() {
-        return Duration.between(lastCheckedAt, Instant.now()).getSeconds();
+    public void markFailed(String reason) {
+        this.lastFailureReason = reason;
+    }
+
+    /** @return 마지막 성공 사이클로부터 경과 초. 아직 한 번도 완주하지 못했으면 null. */
+    public Long getLastCheckedAgeSeconds() {
+        Instant at = this.lastCheckedAt;
+        return at == null ? null : Duration.between(at, Instant.now()).getSeconds();
+    }
+
+    public String getLastFailureReason() {
+        return this.lastFailureReason;
     }
 }
