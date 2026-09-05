@@ -30,7 +30,7 @@ kyuhyeong.com 메인 사이트. 운영 중인 서비스들의 실시간 상태 +
 
 ### 메인 페이지 (`/`)
 
-1. **Service status** — 서비스별 카드 3개 (UP/DOWN 뱃지, 응답시간, Docker 상태, 업타임, 로그 보기 버튼)
+1. **Service status** — 서비스별 카드 3개 (상태 뱃지, Docker 상태, 업타임, 로그 보기 버튼)
 2. **Server metrics** — CPU, Memory, Disk 메트릭 카드 3개
 3. **Projects** — 프로젝트 카드 그리드 (썸네일 + 이름 + 설명 + 기술 태그), 클릭 시 상세 페이지 이동
 
@@ -85,7 +85,8 @@ DB 대신 인메모리로 관리. Spring 스케줄러가 주기적(60초)으로 
 - Map<String, ServiceStatus> serviceStatuses  (containerName → 상태)
 - ServerMetric serverMetric                    (단일 객체)
 
-ServiceStatus: { name, status, responseTimeMs, dockerStatus, uptimeSeconds, checkedAt }
+ServiceStatus: { name, projectSlug, containerName, status, dockerStatus, uptimeSeconds, checkedAt }
+               status = UP | DOWN | MISSING | UNKNOWN  (HTTP 미사용 — responseTimeMs 없음)
 ServerMetric:  { cpuUsage, cpuCores, memoryUsed/Total, diskUsed/Total, collectedAt }
 ```
 
@@ -129,7 +130,7 @@ GET /api/monitoring/logs/{containerName}?tail=100
 ```
 App (React Router)
 ├── MainPage (/)
-│   ├── ServiceCard ×3 (UP/DOWN, 응답시간, Docker 상태, 업타임, 로그 버튼)
+│   ├── ServiceCard ×3 (상태 뱃지, Docker 상태, 업타임, 로그 버튼)
 │   ├── MetricCard ×3 (CPU, Memory, Disk)
 │   ├── ProjectCard ×3 (썸네일, 이름, 설명, 태그)
 │   └── LogModal (로그 보기 클릭 시 표시)
@@ -158,39 +159,105 @@ App (React Router)
 
 ---
 
-## Docker 매핑 설정 (application.yml)
+## 모니터링 설정 (application.yml)
 
 ```yaml
 monitoring:
-  services:
+  services:              # 화면 카드용 (3개). 판정 대상 전체가 아니다
     - name: ITSM
       projectSlug: itsm
-      healthUrl: ""                                     # 빈 값 = HTTP 체크 안 함 → UNKNOWN (docker 상태만 표시)
       containerName: itsm-api
     - name: Song Quiz
       projectSlug: song-quiz
-      healthUrl: https://game.kyuhyeong.com/            # 공개 도메인 체크 (127.0.0.1 바인딩 앱 포트는 host.docker.internal 로 접근 불가)
       containerName: quiz-app
     - name: Account
       projectSlug: account
-      healthUrl: ""
       containerName: account-api
-  checkIntervalSeconds: 60                              # 10s 였을 때 공개 도메인 폴링이 47일 24.4GB 아웃바운드 유발 (2026-07-23)
+  expected:              # 판정 대상 전체 (11개). DB 카드는 안 그리지만 DB가 죽은 건 알아야 한다
+    - dashboard-app
+    - dashboard-db
+    - quiz-app
+    - quiz-db
+    - itsm-api
+    - itsm-batch
+    - itsm-frontend
+    - itsm-db
+    - itsm-fail2ban
+    - account-api
+    - account-db
+  ignored:               # 의도적 제외 — 사유를 반드시 주석으로 남긴다
+    - house-app          # 청약 관련 웹사이트, 추후 구축 예정 — 2026-09-04 down
+    - house-db
+  checkIntervalSeconds: 60
 ```
 
-### 상태 판정 규칙
+### ⚠️ 설정 키 바인딩 규칙
 
-- `healthUrl` 이 비어 있으면 `UNKNOWN` — 체크 수단이 없는 것을 UP 으로 위장하지 않는다.
-- HTTP 5xx → `DEGRADED`, 4xx → `UP`(프로세스는 살아 있음), 연결 실패/타임아웃 → `DOWN`.
-- Docker 상태는 서비스마다 `docker inspect` 를 도는 대신 **컨테이너 전체를 1회 배치 조회**해 채운다.
+`monitoring.*` 는 **`MonitoringProperties`(`@ConfigurationProperties`)로만 읽는다.**
+`${monitoring.check-interval-seconds}` 같은 플레이스홀더로 읽지 말 것 — yml 은 camelCase 인데
+relaxed binding 은 `@ConfigurationProperties` 에만 적용되고 `${...}` 조회에는 적용되지 않는다.
+**이 함정으로 yml 에 60 을 적어둔 채 기본값 10초로 6주간 폴링한 전례가 있다.**
+기동 로그의 `모니터링 판정 주기 N초` 로 실제 적용값을 항상 확인할 것.
 
-### 자체 헬스 엔드포인트
+### 상태 판정 규칙 — 컨테이너 상태 단일
+
+HTTP 폴링은 하지 않는다. 공개 도메인 폴링은 nginx·TLS·라우팅·앱을 한꺼번에 통과해
+"무엇이 죽었는지"를 구분하지 못했고(판정 범위 오염), UptimeRobot 외부 감시와 중복이며,
+감시 대상에 자가 트래픽을 얹었다. **HTTP 판정은 Actuator 도입 후 내부 경로로 재도입한다.**
+
+| 상태 | 의미 |
+|---|---|
+| `UP` | 컨테이너 running |
+| `DOWN` | 컨테이너는 있는데 running 이 아님 |
+| `MISSING` | docker 조회는 됐는데 그 이름이 없음 = 삭제됨 |
+| `UNKNOWN` | **docker 조회 자체가 실패** = 판정 불가. UP 으로도 DOWN 으로도 위장하지 않는다 |
+
+`MISSING`(컨테이너 소멸)과 `UNKNOWN`(소켓 실패)의 구분이 핵심이다. 섞으면 소켓이 한 번
+삐끗할 때마다 전 컨테이너가 DOWN 으로 보이고 전이 판정이 알림을 쏟는다.
+그래서 `docker ps -a` 로 먼저 열거해 데몬 생존을 exit code 로 확인한 뒤 `docker inspect` 로
+상세를 가져온다.
+
+### 양방향 비교
+
+- 목록에 있는데 실행 중이 아님 → 이상
+- **목록에 없는데 실행 중 → 경고** ← 이 방향이 핵심. 없으면 새 앱을 올리고 `expected` 갱신을
+  잊었을 때 감시에서 조용히 빠지고, 그 사실을 알려줄 주체가 없다
+
+### 상태 전이 + 첫 사이클 무음
+
+- 로그에는 **전이만** 남는다. 이상이 지속되는 동안 로그는 조용하다 —
+  **조용한 것이 정상이라는 뜻이 아니다.** 지속 상태는 카드와 `/health/self` 로 본다
+- 기준선은 인메모리라 재시작 때마다 날아간다. crash-loop 에서 알림이 반복되지 않도록
+  **부팅 후 첫 사이클은 적재만 하고 전이로 취급하지 않는다**
+- **판정 불가 사이클은 기준선을 건드리지 않는다** — docker 가 잠깐 끊긴 사이에 죽은
+  컨테이너를 복구 후에도 영영 놓치게 되기 때문
+
+### 자체 헬스 엔드포인트 (UptimeRobot 5분 간격)
 
 ```
 GET /api/monitoring/health/self
-→ 마지막 수집이 checkIntervalSeconds × 3 이상 지났으면 503, 아니면 200
-→ 배포 워크플로가 기동 확인용으로 폴링 (실패 시 컨테이너 로그 덤프 후 job 실패)
+  200 — 판정 루프가 최근에 완주했다
+  503 — 판정 루프가 멈췄다 (NOT_STARTED: 한 번도 못 돎 / STALE: interval x 3 초과)
+  500 — 판정 자체가 불가 (COLLECTION_FAILED, docker 조회 실패 등)
 ```
+
+- **감시 대상 컨테이너가 죽은 것은 여기에 반영하지 않는다.** 반영하면 컨테이너 하나가 죽을
+  때마다 외부 감시가 "사이트 다운"으로 읽고, 호스트·nginx·dashboard 자체의 다운과 구분이 안 된다
+- 무인증 공개 경로이므로 **본문에 컨테이너 이름·상태를 담지 않는다**
+- 배포 워크플로가 이 경로를 폴링해 기동을 확인한다
+
+### 타임아웃 · SSE
+
+- docker 호출은 전부 `DockerCli` 경유(유한 타임아웃). 출력은 파이프가 아니라 임시 파일로
+  받는다 — 파이프는 `waitFor` 선행 시 버퍼 데드락, `readAllBytes` 선행 시 무한 블로킹
+- SSE 브로드캐스트는 전용 스레드 1개 + 대기열 없음. **밀리면 그 사이클을 버린다**
+- emitter 타임아웃 5분(유한값), 동시 연결 상한 40, emitter 개별 예외 격리
+- `markChecked()` 는 `broadcast()` **앞** — SSE 가 막혀도 판정은 끝난 것
+
+### ⚠️ `/api/monitoring/logs/{containerName}` 는 무인증 공개
+
+앱에 인증이 없다. **호스트 nginx 에서 관리 IP 로 제한**한다(DB 포트 화이트리스트와 동일 정책).
+앱 레벨 인증 분리는 2단계.
 
 ---
 
