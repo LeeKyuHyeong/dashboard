@@ -9,7 +9,7 @@ kyuhyeong.com 메인 사이트. 운영 중인 서비스들의 실시간 상태 +
 
 - ITSM (Vue.js + Spring Boot)
 - Song Quiz — 노래맞추기 게임
-- KH Shop — 이커머스 플랫폼
+- Account — 가계부 (2026-07-23 KH Shop 종료로 교체)
 
 ### 도메인
 
@@ -78,7 +78,7 @@ kyuhyeong.com 메인 사이트. 운영 중인 서비스들의 실시간 상태 +
 
 ## 모니터링 데이터 관리
 
-DB 대신 인메모리로 관리. Spring 스케줄러가 주기적(10초)으로 수집하여 메모리에 갱신.
+DB 대신 인메모리로 관리. Spring 스케줄러가 주기적(60초)으로 수집하여 메모리에 갱신.
 
 ```
 인메모리 구조:
@@ -109,7 +109,7 @@ GET /api/projects/{slug}
 SSE /api/monitoring/stream
 → 단일 SSE 스트림, 서비스 상태 + 서버 리소스 통합
 → 연결 즉시 현재 상태를 첫 이벤트로 전송 (별도 snapshot API 불필요)
-→ 이후 10초 간격으로 업데이트 푸시
+→ 이후 60초 간격으로 업데이트 푸시
   event: monitoring
   data: { services: [...], server: {...}, timestamp: "..." }
 ```
@@ -153,7 +153,7 @@ App (React Router)
 
 1. 페이지 진입 → useSSE 훅이 `/api/monitoring/stream`에 연결
 2. 서버가 즉시 현재 상태를 첫 이벤트로 전송 → useMonitoringStore에 저장
-3. 이후 10초 간격으로 업데이트 이벤트 수신 → 같은 store 갱신
+3. 이후 60초 간격으로 업데이트 이벤트 수신 → 같은 store 갱신
 4. 프로젝트 데이터는 `GET /api/projects`(목록) / `GET /api/projects/{slug}`(상세)로 컴포넌트 로컬 state에 저장
 
 ---
@@ -165,17 +165,31 @@ monitoring:
   services:
     - name: ITSM
       projectSlug: itsm
-      healthUrl: http://itsm-api:8080/actuator/health   # itsm_backend 네트워크 직결
+      healthUrl: ""                                     # 빈 값 = HTTP 체크 안 함 → UNKNOWN (docker 상태만 표시)
       containerName: itsm-api
     - name: Song Quiz
       projectSlug: song-quiz
       healthUrl: https://game.kyuhyeong.com/            # 공개 도메인 체크 (127.0.0.1 바인딩 앱 포트는 host.docker.internal 로 접근 불가)
       containerName: quiz-app
-    - name: KH Shop
-      projectSlug: kh-shop
-      healthUrl: https://shop.kyuhyeong.com/
-      containerName: shop-app
-  checkIntervalSeconds: 10
+    - name: Account
+      projectSlug: account
+      healthUrl: ""
+      containerName: account-api
+  checkIntervalSeconds: 60                              # 10s 였을 때 공개 도메인 폴링이 47일 24.4GB 아웃바운드 유발 (2026-07-23)
+```
+
+### 상태 판정 규칙
+
+- `healthUrl` 이 비어 있으면 `UNKNOWN` — 체크 수단이 없는 것을 UP 으로 위장하지 않는다.
+- HTTP 5xx → `DEGRADED`, 4xx → `UP`(프로세스는 살아 있음), 연결 실패/타임아웃 → `DOWN`.
+- Docker 상태는 서비스마다 `docker inspect` 를 도는 대신 **컨테이너 전체를 1회 배치 조회**해 채운다.
+
+### 자체 헬스 엔드포인트
+
+```
+GET /api/monitoring/health/self
+→ 마지막 수집이 checkIntervalSeconds × 3 이상 지났으면 503, 아니면 200
+→ 배포 워크플로가 기동 확인용으로 폴링 (실패 시 컨테이너 로그 덤프 후 job 실패)
 ```
 
 ---
@@ -183,6 +197,7 @@ monitoring:
 ## 프로젝트 관리 방침
 
 - 프로젝트 콘텐츠(project, project_achievement)는 DB 직접 수정 (관리자 API 없음)
+- ⚠️ **운영(mariadb) 프로필은 `spring.sql.init.mode: never`** — `always` 였을 때 기동마다 seed 가 재실행돼 운영 중 DELETE 한 행(kh-shop)이 부활하는 사고 발생(2026-07-23). **운영 데이터의 주인은 DB**, `data-mariadb.sql` 은 최초 구축 시 수동 실행용 기준값일 뿐이다. dev(h2) 프로필은 인메모리라 `always` 유지.
 - 모니터링 데이터는 인메모리 관리 (DB 저장 안 함, 서버 재시작 시 초기화)
 - Docker 컨테이너 매핑은 yaml 설정 파일로 관리
 
