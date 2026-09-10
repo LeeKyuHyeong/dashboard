@@ -44,6 +44,49 @@ jobs:
           script: |
             set -e  # 중간 명령 실패가 마지막 명령 성공에 묻혀 job 이 초록이 되는 것 방지 (shop CI 침묵 실패 교훈, 2026-06-06)
             cd ~/dashboard
+
+            # ── 0. 저장소 기준으로 서버 워킹트리 동기화 ──────────────────────────────
+            # 이 단계가 없으면 서버의 docker-compose.yml 이 마지막 수동 pull 시점에 고정돼
+            # 저장소의 compose/설정 변경이 아무리 push 돼도 영영 반영되지 않는다.
+            # (quiz 3fc73d3 과 같은 조치 — 거기서는 127.0.0.1 바인딩 변경이 옛 compose 로
+            #  force-recreate 되며 미적용으로 남을 뻔했다)
+            #
+            # ⚠ 파괴적 동기화(reset --hard)는 일부러 쓰지 않는다. 서버에 사람이 직접 고친
+            #   추적 파일이 있으면 그것을 말없이 날리는 대신 배포를 세우고 사람이 보게 한다.
+            #   저장소로 되가져올지 버릴지는 사람이 판단할 문제다.
+            git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+              echo "::error::~/dashboard 가 git 워킹트리가 아니다 — 서버 clone 상태를 확인할 것"
+              exit 1
+            }
+            BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            if [ "$BRANCH" != "main" ]; then
+              echo "::error::서버 워킹트리가 main 이 아니다 (현재: $BRANCH) — 배포 중단"
+              exit 1
+            fi
+            git fetch --prune origin main || {
+              echo "::error::git fetch 실패 — 서버에서 origin 접근(원격 URL·자격증명)을 확인할 것"
+              exit 1
+            }
+            git pull --ff-only origin main || {
+              echo "::error::git pull --ff-only 실패 — 서버 워킹트리에 로컬 변경 또는 분기가 있다"
+              echo "  서버에서 확인:  cd ~/dashboard && git status && git diff"
+              echo "  --- 추적 파일 드리프트 ---"
+              git status --porcelain --untracked-files=no || true
+              echo "  저장소로 되가져올지 / 버릴지(git reset --hard origin/main) 는 사람이 결정한다"
+              exit 1
+            }
+            echo "0. 동기화 완료 → $(git rev-parse --short HEAD) $(git log -1 --format=%s)"
+            # 이 목록이 비어 있어야 '서버 git 상태 청결'이다. 남아 있으면 눈에 띄게 남긴다.
+            DRIFT=$(git status --porcelain --untracked-files=no)
+            if [ -n "$DRIFT" ]; then
+              echo "::warning::서버 워킹트리에 저장소 미반영 변경이 남아 있다:"
+              echo "$DRIFT"
+            fi
+
+            # ── 1. 앱 컨테이너만 교체 ────────────────────────────────────────────────
+            # 서비스명을 명시해 dashboard 만 재생성한다. db(dashboard-db)는 볼륨을 물고 있는
+            # 상태 저장 컨테이너라 앱 배포로 건드릴 이유가 없다. 서비스명을 빼면 db 까지
+            # 재생성 대상이 되므로 범위를 넓히지 말 것.
             export DOCKERHUB_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/dashboard:latest
             export DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
             docker compose pull dashboard
