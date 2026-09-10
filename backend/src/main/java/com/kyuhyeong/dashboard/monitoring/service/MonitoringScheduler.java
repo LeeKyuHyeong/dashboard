@@ -16,8 +16,18 @@ import java.time.Duration;
  * 잡지 않는다. yml 의 키는 {@code monitoring.checkIntervalSeconds}(camelCase)인데
  * relaxed binding 은 {@code @ConfigurationProperties} 에만 적용되고 {@code ${...}} 조회에는
  * 적용되지 않아, 플레이스홀더가 키를 못 찾고 <b>기본값으로 조용히 떨어진다</b>.
- * 실제로 이 프로젝트에서 yml 에 60 을 적어둔 채 기본값 10초로 6주간 폴링한 전례가 있다.
- * 그래서 주기는 {@link MonitoringProperties} 한 곳에서만 읽는다.
+ *
+ * <p><b>이 프로젝트의 전례</b>(커밋 이력 기준): 최초 커밋(2026-04-06)부터
+ * {@code "#{${monitoring.check-interval-seconds:10} * 1000}"} 로 잡혀 있었고, 그 플레이스홀더는
+ * 한 번도 해석된 적이 없다. 5개월 내내 <b>기본값 10 으로 돌았다.</b> 그런데 같은 기간
+ * yml 값도 10 이라 <b>증상이 전혀 드러나지 않았다.</b> yml 을 60 으로 올린 2026-09-04 커밋에서
+ * 마침 스케줄러도 {@code @monitoringProperties} 참조로 바꿨기 때문에, 실제로 "yml 60 · 실동작
+ * 10초" 로 돌아간 구간은 존재하지 않는다.
+ *
+ * <p>교훈은 사고가 났다는 것이 아니라 그 반대다 — <b>설정이 조용히 무시되고 있어도 기본값이
+ * yml 값과 같으면 아무 증상도 나타나지 않는다.</b> 값이 갈라지는 날에야 드러나고, 그날은
+ * 보통 설정을 고친 사람이 "왜 안 먹지"를 겪는 날이다. 그래서 주기는
+ * {@link MonitoringProperties} 한 곳에서만 읽고, 실제 적용값을 기동 로그로 증명한다.
  */
 @Component
 @RequiredArgsConstructor
@@ -34,7 +44,8 @@ public class MonitoringScheduler implements SchedulingConfigurer {
     @Override
     public void configureTasks(ScheduledTaskRegistrar registrar) {
         int seconds = properties.getCheckIntervalSeconds();
-        // 기동 로그에 실제 적용된 주기를 남긴다 — 위 6주 사고는 이 한 줄이 있었으면 첫날 잡혔다.
+        // 기동 로그에 실제 적용된 주기를 남긴다 — 위 플레이스홀더 함정은 이 한 줄이 있었으면
+        // 값이 갈라지기 전에(=증상 없이 5개월 지나가기 전에) 첫날 드러났다.
         log.info("모니터링 판정 주기 {}초 (monitoring.checkIntervalSeconds)", seconds);
         registrar.addFixedDelayTask(this::collectAndBroadcast, Duration.ofSeconds(seconds));
     }

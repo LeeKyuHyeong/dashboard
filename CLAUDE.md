@@ -28,7 +28,8 @@ ITSM 숨김: `project.visible=false`(프로젝트 카드 제외) + `application.
 
 ## 기술 스택
 
-- **Backend**: Spring Boot, MariaDB, SSE (SseEmitter), OSHI, Spring Actuator, Docker Engine API
+- **Backend**: Spring Boot, MariaDB, SSE (SseEmitter), OSHI, docker CLI 서브프로세스(`docker.sock` 마운트 + `ProcessBuilder`)
+  - ⚠️ **Spring Actuator 는 이 프로젝트에 없다** (`backend/build.gradle.kts` 에 `spring-boot-starter-actuator` 미선언). 자체 헬스는 직접 만든 `/api/monitoring/health/self` 다. 아래 "HTTP 판정은 Actuator 도입 후 재도입한다" 는 **미도입 상태를 전제한 미결 문구**다.
 - **Frontend**: React, Zustand, Recharts, React Router
 - **Infra**: Cafe24 VPS (모니터링 대상과 동일 서버), Docker 컨테이너 매핑은 yaml 설정
 
@@ -274,7 +275,15 @@ quiz 는 2026-09-08 무중단 배포 도입으로 `quiz-app` 이 사라지고 `q
 `monitoring.*` 는 **`MonitoringProperties`(`@ConfigurationProperties`)로만 읽는다.**
 `${monitoring.check-interval-seconds}` 같은 플레이스홀더로 읽지 말 것 — yml 은 camelCase 인데
 relaxed binding 은 `@ConfigurationProperties` 에만 적용되고 `${...}` 조회에는 적용되지 않는다.
-**이 함정으로 yml 에 60 을 적어둔 채 기본값 10초로 6주간 폴링한 전례가 있다.**
+**이 프로젝트의 실제 전례**(커밋 이력 기준): 최초 커밋(2026-04-06)부터 스케줄러가
+`#{${monitoring.check-interval-seconds:10} * 1000}` 로 잡혀 있었고 그 플레이스홀더는
+**한 번도 해석된 적이 없다.** 5개월 내내 기본값 10 으로 돌았다. 다만 그 기간 yml 값도 10 이라
+**증상이 전혀 드러나지 않았다.** yml 을 60 으로 올린 2026-09-04 커밋(`149f3cd`)에서 마침
+스케줄러도 `@monitoringProperties` 참조로 함께 바꿨기 때문에, "yml 60 · 실동작 10초" 구간은
+존재하지 않는다.
+
+교훈은 사고가 났다는 것이 아니라 그 반대다 — **설정이 조용히 무시되고 있어도 기본값이 yml 값과
+같으면 아무 증상도 나타나지 않는다.** 값이 갈라지는 날에야 드러난다.
 기동 로그의 `모니터링 판정 주기 N초` 로 실제 적용값을 항상 확인할 것.
 
 ### 상태 판정 규칙 — 컨테이너 상태 단일
