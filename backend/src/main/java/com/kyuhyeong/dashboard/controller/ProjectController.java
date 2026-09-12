@@ -27,6 +27,7 @@ public class ProjectController {
     @GetMapping("/{slug}")
     public ResponseEntity<ProjectDetailDto> getProject(@PathVariable String slug) {
         return projectRepository.findBySlug(slug)
+                .filter(project -> Boolean.TRUE.equals(project.getVisible()))
                 .map(ProjectDetailDto::from)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
