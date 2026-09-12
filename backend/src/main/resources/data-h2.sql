@@ -1,8 +1,11 @@
 -- Insert projects (H2)
 MERGE INTO project (id, name, slug, description, tech_stack, demo_url, github_url, thumbnail_url, sort_order, visible) KEY(id) VALUES
+-- id 1 github_url 은 NULL: itsm 저장소가 private 이라 공개 링크를 걸면 404 가 된다 (2026-09-12).
+-- 카드 자체도 visible=FALSE 라 지금은 노출되지 않는다. 저장소 정리를 마치고 public 으로 돌릴 때
+-- 이 값과 visible 을 함께 되돌릴 것.
 (1, 'ITSM', 'itsm', '실제 사용자 없이 임의로 데이터를 주입해 트래픽이 발생하는 것처럼 시뮬레이션하는 학습용 사이트. 의도적으로 트래픽 폭주와 메모리 장애를 유발하며 트래픽 관리와 장애 대응을 공부합니다.',
  '["Vue.js", "Spring Boot", "MariaDB", "Docker"]',
- 'https://itsm.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/itsm', '/thumbnails/itsm.png', 1, FALSE),
+ 'https://itsm.kyuhyeong.com', NULL, '/thumbnails/itsm.png', 1, FALSE),
 (2, 'Song Quiz', 'song-quiz', '실시간 멀티플레이어 노래 맞추기 게임. 짧은 음악 클립을 듣고 누가 가장 빠르게 곡을 맞추는지 겨루는 게임입니다.',
  '["React", "Spring Boot", "WebSocket", "Redis", "Docker"]',
  'https://game.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/quiz', '/thumbnails/song-quiz.png', 2, TRUE),
