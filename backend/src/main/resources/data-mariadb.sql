@@ -7,9 +7,12 @@ INSERT IGNORE INTO project (id, name, slug, description, tech_stack, demo_url, g
  '["React", "Spring Boot", "WebSocket", "Redis", "Docker"]',
  'https://game.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/quiz', '/thumbnails/song-quiz.png', 2, TRUE, NOW(), NOW()),
 -- id 3 은 구 kh-shop 자리 (2026-07-23 서비스 종료, 저장소는 GitHub Archive 로 보존) — account 가 승계
+-- github_url 은 NULL: account 저장소를 private 으로 전환하므로 공개 링크를 걸면 404 가 된다 (2026-09-12).
+-- 프론트(ProjectHeader.jsx)가 null 이면 GitHub 버튼 자체를 렌더링하지 않는다.
+-- ※ 이 파일은 운영에 반영되지 않는다 (prod 는 spring.sql.init.mode: never). 운영은 DB 행을 직접 UPDATE 할 것.
 (3, 'Account', 'account', '부부/가구 단위 가계부 앱. 영수증 사진을 Claude Vision 으로 분석해 지출을 자동 분류·기록합니다.',
  '["Spring Boot", "MariaDB", "Docker", "Claude Vision"]',
- 'https://account.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/account', NULL, 3, TRUE, NOW(), NOW());
+ 'https://account.kyuhyeong.com', NULL, NULL, 3, TRUE, NOW(), NOW());
 
 -- Insert achievements
 INSERT IGNORE INTO project_achievement (id, project_id, title, description, metric_value, sort_order, created_at) VALUES
