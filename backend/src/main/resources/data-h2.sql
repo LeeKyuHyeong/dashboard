@@ -12,7 +12,7 @@ MERGE INTO project (id, name, slug, description, tech_stack, demo_url, github_ur
 -- 프론트(ProjectHeader.jsx)가 null 이면 GitHub 버튼 자체를 렌더링하지 않는다.
 (3, 'Account', 'account', '부부/가구 단위 가계부 앱. 영수증 사진을 Claude Vision 으로 분석해 지출을 자동 분류·기록합니다.',
  '["Spring Boot", "MariaDB", "Docker", "Claude Vision"]',
- 'https://account.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/account', NULL, 3, TRUE);
+ 'https://account.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/account', '/thumbnails/account.png', 3, TRUE);
 
 -- Insert achievements
 MERGE INTO project_achievement (id, project_id, title, description, metric_value, sort_order) KEY(id) VALUES

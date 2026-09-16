@@ -13,7 +13,7 @@ INSERT IGNORE INTO project (id, name, slug, description, tech_stack, demo_url, g
 -- ※ 이 파일은 운영에 반영되지 않는다 (prod 는 spring.sql.init.mode: never). 운영은 DB 행을 직접 UPDATE 할 것.
 (3, 'Account', 'account', '부부/가구 단위 가계부 앱. 영수증 사진을 Claude Vision 으로 분석해 지출을 자동 분류·기록합니다.',
  '["Spring Boot", "MariaDB", "Docker", "Claude Vision"]',
- 'https://account.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/account', NULL, 3, TRUE, NOW(), NOW());
+ 'https://account.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/account', '/thumbnails/account.png', 3, TRUE, NOW(), NOW());
 
 -- Insert achievements
 INSERT IGNORE INTO project_achievement (id, project_id, title, description, metric_value, sort_order, created_at) VALUES
