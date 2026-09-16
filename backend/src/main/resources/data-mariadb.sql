@@ -5,7 +5,7 @@ INSERT IGNORE INTO project (id, name, slug, description, tech_stack, demo_url, g
  '["Vue.js", "Spring Boot", "MariaDB", "Docker"]',
  'https://itsm.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/itsm', '/thumbnails/itsm.png', 1, TRUE, NOW(), NOW()),
 (2, 'Song Quiz', 'song-quiz', '실시간 멀티플레이어 노래 맞추기 게임. 짧은 음악 클립을 듣고 누가 가장 빠르게 곡을 맞추는지 겨루는 게임입니다.',
- '["React", "Spring Boot", "WebSocket", "Redis", "Docker"]',
+ '["Spring Boot", "WebSocket", "MariaDB", "Docker"]',
  'https://game.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/quiz', '/thumbnails/song-quiz.png', 2, TRUE, NOW(), NOW()),
 -- id 3 은 구 kh-shop 자리 (2026-07-23 서비스 종료, 저장소는 GitHub Archive 로 보존) — account 가 승계
 -- github_url: account 저장소 2026-09-12 private → 2026-09-16 히스토리 정리 후 public 재전환, 링크 복원.
@@ -19,7 +19,7 @@ INSERT IGNORE INTO project (id, name, slug, description, tech_stack, demo_url, g
 INSERT IGNORE INTO project_achievement (id, project_id, title, description, metric_value, sort_order, created_at) VALUES
 (1, 1, '메뉴 기반 3계층 RBAC', '역할 11종 × 메뉴 30개 read/write 매트릭스를 DB로 관리하고 Spring Security → 인터셉터(요청 URI ↔ 메뉴 URL) → @PreAuthorize 3계층으로 검사', '역할 11종 × 메뉴 30개', 1, NOW()),
 (2, 1, 'CI 테스트 게이트와 자동 롤백', '백엔드 660건·프론트 Vitest 164건 테스트를 CI에서 실행해 통과 시에만 이미지 빌드, 배포 후 헬스체크 실패 시 직전 SHA 이미지로 자동 롤백', '테스트 660 + 164건', 2, NOW()),
-(3, 2, '실시간 멀티플레이어', 'WebSocket 기반 실시간 게임 세션으로 동시 접속 플레이어 지원', '최대 8명', 1, NOW()),
-(4, 2, '오디오 스트리밍', '프리로딩을 활용한 효율적인 음악 클립 스트리밍으로 끊김 없는 게임 플레이 제공', NULL, 2, NOW()),
+(3, 2, '실시간 멀티플레이어', 'STOMP/SockJS WebSocket push + HTTP 입력, 연결 실패 시 polling fallback으로 방 기반 멀티플레이 제공', '방당 기본 8인', 1, NOW()),
+(4, 2, '동시성 3중 방어', '정답 처리·곡 선택의 동시 요청 경합을 방별 상태(ConcurrentHashMap)·방 단위 락·JPA @Version 세 층으로 차단', NULL, 2, NOW()),
 -- id 5, 6 은 구 kh-shop 성과 자리 — 5 를 account 가 승계
 (5, 3, '영수증 자동 분류', 'Claude Vision 으로 영수증 사진을 분석해 품목·금액·카테고리를 자동 입력', NULL, 1, NOW());
