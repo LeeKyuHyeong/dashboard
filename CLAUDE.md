@@ -368,3 +368,34 @@ location ^~ /api/monitoring/logs { return 404; }
 - **서버/배포 인프라 SSOT: `D:\server-infra.md`** (로컬 전용, git 미추적 — 리포·운영서버에 없음)
 - 포트·도메인·방화벽·컨테이너 TZ 규칙(`Asia/Seoul` 의무)·배포 반영 매트릭스(푸시 시 서버 자동/수동 반영 범위)·트러블슈팅은 전부 그 문서 참조.
 - 리포별 `server-infra-*.md`는 폐지됨(2026-06-06). **인프라(compose/nginx/포트/배포) 변경 시 `D:\server-infra.md`를 함께 최신화할 것.**
+
+## 검증 설정
+
+> 전역 `~/.claude/CLAUDE.md`의 검증 규칙(AC → 검증 실행 → 기록)이 이 저장소에 적용될 때의 값. 검증 기록은 `docs/verification/`(2026-09-16 기준 아직 없음 — 첫 기록 시 `~/.claude/verification/templates.md` §1 구조로 생성).
+
+- 유형: 본인 작성·운영 중. 전역 onboarding §1 특성 테스트 절차 해당 없음.
+- 기술 스택: 위 "기술 스택". Spring Boot(Java 17) + React/Vite 를 하나의 jar 로 배포
+- 빌드: 백엔드 `backend/` `./gradlew build` · 프론트 `frontend/` `npm run build` + `npm run lint`. 운영과 같은 결합 산출물은 루트 `Dockerfile`
+- 전체 테스트: `backend/` `./gradlew test` — 2026-09-16 기준 `@Test` 14건(판정 규칙 13 + `contextLoads` 1, `@ActiveProfiles("dev")` H2). 프론트는 테스트 러너 없음(`npm run lint` 만)
+- 부분 테스트: `./gradlew test --tests "TransitionServiceTest"`
+- 로컬 실행: 위 "로컬 개발"(백엔드 dev 프로파일 필수 + Vite 5173)
+- 사용자 시나리오 검증 방식: 수동 체크리스트(브라우저). 실제 컨테이너 상태·SSE·Docker 로그는 로컬에서 재현 불가(운영 docker.sock 필요) → 운영 반영 후 🙋
+- 프로파일 차이: dev = H2 + seed `always` / 기본(prod) = MariaDB 3306 + seed `never`. 운영 데이터의 주인은 DB(위 "프로젝트 관리 방침")
+- 테스트 계정: 없음(로그인 없는 조회 전용)
+- 외부 연동과 Mock 여부: docker CLI(`ProcessBuilder`)·OSHI → 단위 테스트는 판정 로직만 검증, 실 상태는 운영 🙋 / UptimeRobot → `/api/monitoring/health/self` 응답으로 확인
+- 배포 방식: `main` push = 배포(`deploy.yml`: 이미지 → Docker Hub → VPS `docker compose pull/up`, health/self 폴링). 배포 후 Smoke: 메인 탭 2개 렌더 + 상세 1건 + `/api/monitoring/health/self` 200
+- 검증 기록 위치: docs/verification/
+
+### P0 핵심 시나리오 (초안 — 개발자 확정 필요)
+1. 메인 `/` 프로젝트 탭·모니터링 탭 렌더, 상세 `/projects/:slug`
+2. 컨테이너 상태 판정·전이(그룹 해석, 첫 사이클 무음) — 단위 테스트 13건이 계약
+3. `/api/monitoring/health/self` 200 (배포·UptimeRobot 계약)
+4. SSE 스트림 연결과 타임아웃 처리(위 "타임아웃 · SSE")
+
+P1: Docker 로그 엔드포인트(앱 인증 없음 — 위 ⚠ 항목, 노출 범위 변경 시 P0) · P2: 프로젝트 콘텐츠 DB 수정 · P3: 문구·CSS
+
+### 이 프로젝트만의 규칙
+- `application.yml` 설정 키 변경은 위 "설정 키 바인딩 규칙" 대조 후, 검증 기록 "DB·설정 변경"에 키 이름을 적는다
+- 프론트는 자동 테스트가 없으므로 `npm run lint` + 수동 시나리오를 기록에 명시한다
+- 운영 프로파일의 `spring.sql.init.mode` 를 `always` 로 바꾸지 않는다(2026-07-23 사고)
+- 컨테이너 매핑 yaml 을 바꾸면 운영 반영 후 모니터링 탭에서 대상 컨테이너가 전부 보이는지 🙋로 확인한다
