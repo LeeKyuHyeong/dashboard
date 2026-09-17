@@ -1,9 +1,10 @@
 -- Insert projects (H2)
 MERGE INTO project (id, name, slug, description, tech_stack, demo_url, github_url, thumbnail_url, sort_order, visible) KEY(id) VALUES
--- id 1: itsm 저장소는 2026-09-16 public 전환(히스토리 정리 후) — github_url·visible 복원, 설명·성과를 실제 앱 내용으로 교체.
+-- id 1: itsm 저장소는 2026-09-16 public 전환(히스토리 정리 후), 설명·성과는 실제 앱 내용으로 교체.
+-- 2026-09-17: 운영 DB 에 맞춰 visible=FALSE·github_url=NULL — 시연 계정 오류 등 정리 전까지 카드 비공개(상세도 404, bd95ec7).
 (1, 'ITSM', 'itsm', '장애·서비스요청·변경·자산(CMDB)·정기점검·보고·게시판을 다루는 ITSM 웹 애플리케이션. Spring Boot 4 멀티모듈 + Vue 3 SPA, 메뉴 테이블 기반 3계층 RBAC, CI 테스트 게이트와 헬스체크 실패 시 자동 롤백 배포.',
  '["Vue.js", "Spring Boot", "MariaDB", "Docker"]',
- 'https://itsm.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/itsm', '/thumbnails/itsm.png', 1, TRUE),
+ 'https://itsm.kyuhyeong.com', NULL, '/thumbnails/itsm.png', 1, FALSE),
 (2, 'Song Quiz', 'song-quiz', '실시간 멀티플레이어 노래 맞추기 게임. 짧은 음악 클립을 듣고 누가 가장 빠르게 곡을 맞추는지 겨루는 게임입니다.',
  '["Spring Boot", "WebSocket", "MariaDB", "Docker"]',
  'https://game.kyuhyeong.com', 'https://github.com/LeeKyuHyeong/quiz', '/thumbnails/song-quiz.png', 2, TRUE),
