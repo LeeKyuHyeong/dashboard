@@ -32,12 +32,14 @@
 | C2-7 | 예외 | docker 조회 실패는 UNKNOWN (DOWN 과 섞이지 않음) | ✅ | 기존 `#docker_조회_실패는_*` |
 | C2-8 | 연쇄 | `/health/self` 는 감시 대상의 unhealthy 를 반영하지 않는다(변경 없음) | ✅ | 코드 변경 없음 — 판정 루프 생존만 본다 |
 | C2-9 | 정상 | 실제 docker 가 HEALTHCHECK 유·무 컨테이너 모두에서 4칸 행을 낸다 | 🙋 | §6-1 |
+| C2-11 | 정상 | 배포 후 `dashboard-app` 이 `healthy` 가 된다 (busybox wget 이 컨테이너 안에서 동작) | 🙋 | §6-2 4번 |
 | C2-10 | 정상 | 운영 화면에서 카드가 전부 UP 으로 보인다(행 누락으로 MISSING 이 되지 않는다) | 🙋 | §6-2 |
 
 ## 3. 변경 사항
 - `monitoring/controller/MonitoringController#getLogs` — `props.watchedContainerNames()` 에 없는 이름은 404, docker 호출 전에 거른다
 - `monitoring/service/HealthCheckService` — inspect 템플릿에 4번째 칸(health, nil 가드), `ContainerState.health` + `up()`(running 이고 unhealthy 가 아님). `compare`·`toStatus` 가 `up()` 을 쓴다. unhealthy 일 때 `ServiceStatus.dockerStatus = "unhealthy"`
 - 프론트 변경 없음 — 배지는 UP/UNKNOWN 이 아니면 down 스타일, Docker 칸은 `running` 이 아니면 빨간 글씨로 값을 그대로 보여준다
+- `docker-compose.yml` — `dashboard-app` 에 HEALTHCHECK 추가(`/api/monitoring/health/self`, interval 30s·start_period 90s). 개발자 요청 2026-09-20. 배포 스크립트의 `git pull` 로 서버 compose 에 반영되고 `up -d` 가 컨테이너를 다시 만든다
 - DB·설정 변경: 없음 (`application.yml` 키 변경 없음)
 
 ## 4. 영향 범위 분석
@@ -66,6 +68,7 @@ docker inspect --format '{{.Name}}	{{.State.Status}}	{{.State.StartedAt}}	{{if .
 ### 6-2. 배포 후
 1. `https://kyuhyeong.com` 프로젝트 탭. [기대] Song Quiz·Account 카드가 **UP / running** (MISSING·DOWN 이 아님).
 2. 서버: `docker logs --since 5m dashboard-app 2>&1 | grep -E "전이|이상|MISSING"` [기대] "전이 기준선 적재 … 현재 이상 0건". 0 이 아니면 어떤 컨테이너가 unhealthy 인지 `docker ps --format '{{.Names}} {{.Status}}'` 로 확인 — **실제로 unhealthy 인 컨테이너를 이번에 처음 보게 되는 것일 수 있다**(그 경우 판정이 맞다).
+4. 서버(기동 2분 뒤): `docker ps --filter name=dashboard-app --format '{{.Names}} {{.Status}}'` [기대] `dashboard-app Up … (healthy)`. `(unhealthy)` 면 `docker inspect --format '{{json .State.Health.Log}}' dashboard-app` 로 wget 출력을 본다.
 3. 에이전트: 외부에서 `/api/monitoring/health/self` 200, `/api/monitoring/logs/x` 404(nginx) 확인.
 
 ## 7. checklist 점검
@@ -77,7 +80,7 @@ docker inspect --format '{{.Name}}	{{.State.Status}}	{{.State.StartedAt}}	{{if .
 
 ## 9. 미검증 영역과 남은 위험
 - `starting` 을 UP 으로 보므로 start_period 안에서 계속 실패 중인 컨테이너는 그동안 UP 으로 보인다(quiz 최대 60초 + retries)
-- HEALTHCHECK 가 없는 5개(account-api·itsm-api·itsm-batch·dashboard-app·itsm-fail2ban)는 여전히 "떠 있으면 UP" — 각 앱 리포에서 HEALTHCHECK 를 추가해야 닫힌다
+- HEALTHCHECK 가 없는 컨테이너(itsm-api·itsm-batch, fail2ban 은 이미지 자체 선언 여부 미확인. dashboard-app 은 이번에 추가, account-api 는 account 리포에서 추가)는 여전히 "떠 있으면 UP" — 각 앱 리포에서 HEALTHCHECK 를 추가해야 닫힌다
 - 알림 채널 없음(전이는 로그에만) — 이번 범위 밖, 외부 감시는 UptimeRobot + Discord
 
 ## 10. Regression 등록
