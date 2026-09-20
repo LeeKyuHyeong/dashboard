@@ -61,7 +61,7 @@
 ```bash
 docker inspect --format '{{.Name}}	{{.State.Status}}	{{.State.StartedAt}}	{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' quiz-db account-api itsm-fail2ban
 ```
-(칸 사이는 탭 문자) [기대] 3행, 각 4칸 — `/quiz-db running <시각> healthy`, `/account-api running <시각> none`, `/itsm-fail2ban running <시각> none`. 에러(`template: … nil pointer`)가 나오면 배포하지 않는다.
+(칸 사이는 탭 문자) [기대] 3행, 각 4칸 — `/quiz-db running <시각> healthy`, `/account-api running <시각> none`, `/itsm-fail2ban running <시각> none 또는 healthy`(`crazymax/fail2ban` 이미지가 자체 HEALTHCHECK 를 갖고 있을 수 있다 — compose 에는 없지만 이미지에 선언돼 있으면 값이 나온다. 어느 쪽이든 4칸이면 정상). 에러(`template: … nil pointer`)가 나오면 배포하지 않는다.
 
 ### 6-2. 배포 후
 1. `https://kyuhyeong.com` 프로젝트 탭. [기대] Song Quiz·Account 카드가 **UP / running** (MISSING·DOWN 이 아님).
