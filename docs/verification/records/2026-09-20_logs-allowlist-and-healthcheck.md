@@ -2,7 +2,7 @@
 - 일자: 2026-09-20
 - 유형: 버그 (보안 1 + 판정 누락 1)
 - 우선순위: P1 (판정 규칙은 P0 시나리오 2 — 단위 테스트가 계약)
-- 판정: 조건부 — 자동 검증 ✅, 실제 docker 출력·운영 화면 확인이 🙋
+- 판정: 수용 가능 — 자동 검증·서버 docker 출력·운영 배포 Smoke ✅ (2026-09-21)
 
 ## 1. 요청과 목적
 - 사용자가 원한 것: Redis·AWS 작업 전에 운영 중인 사이트의 구멍부터 막는다 (quiz 인증 방어와 같은 묶음).
@@ -31,9 +31,9 @@
 | C2-6 | 예외 | 멈춘 컨테이너는 health 와 무관하게 DOWN, Docker 칸은 `exited` 그대로 | ✅ | `#멈춘_컨테이너는_*` |
 | C2-7 | 예외 | docker 조회 실패는 UNKNOWN (DOWN 과 섞이지 않음) | ✅ | 기존 `#docker_조회_실패는_*` |
 | C2-8 | 연쇄 | `/health/self` 는 감시 대상의 unhealthy 를 반영하지 않는다(변경 없음) | ✅ | 코드 변경 없음 — 판정 루프 생존만 본다 |
-| C2-9 | 정상 | 실제 docker 가 HEALTHCHECK 유·무 컨테이너 모두에서 4칸 행을 낸다 | 🙋 | §6-1 |
-| C2-11 | 정상 | 배포 후 `dashboard-app` 이 `healthy` 가 된다 (busybox wget 이 컨테이너 안에서 동작) | 🙋 | §6-2 4번 |
-| C2-10 | 정상 | 운영 화면에서 카드가 전부 UP 으로 보인다(행 누락으로 MISSING 이 되지 않는다) | 🙋 | §6-2 |
+| C2-9 | 정상 | 실제 docker 가 HEALTHCHECK 유·무 컨테이너 모두에서 4칸 행을 낸다 | ✅ | 개발자 SSH 2026-09-20: `quiz-db … healthy` / `account-api … none` / `itsm-fail2ban … healthy`, 템플릿 에러 없음. fail2ban 은 이미지 자체 HEALTHCHECK(`fail2ban-client ping`) 보유 확인 |
+| C2-11 | 정상 | 배포 후 `dashboard-app` 이 `healthy` 가 된다 (busybox wget 이 컨테이너 안에서 동작) | ✅ | 개발자 SSH 2026-09-20: `dashboard-app Up 9 minutes (healthy)` |
+| C2-10 | 정상 | 운영 화면에서 카드가 전부 UP 으로 보인다(행 누락으로 MISSING 이 되지 않는다) | ✅ | 배포 후 SSE 스트림: `quiz-app-green UP running`, `account-api UP running` |
 
 ## 3. 변경 사항
 - `monitoring/controller/MonitoringController#getLogs` — `props.watchedContainerNames()` 에 없는 이름은 404, docker 호출 전에 거른다
@@ -55,8 +55,8 @@
 | 재현(수정 전) | 새 테스트 2개 클래스 | 12건 중 9건 실패 (임의 이름으로 docker 실행, unhealthy 가 UP, 4칸 출력 미지원) | ✅ |
 | 빌드 + 전체 회귀 | `backend/` `./gradlew test` | 26 passed (14 + 신규 12), 0 failed | ✅ |
 | 프론트 | 변경 없음 | — | 해당 없음 |
-| 실제 docker 출력 | §6-1 | — | 🙋 |
-| 배포 후 Smoke | §6-2 | — | 🙋 |
+| 실제 docker 출력 | §6-1 (개발자 SSH, 2026-09-20) | 3행·4값, 에러 없음 | ✅ |
+| 배포 후 Smoke | 2026-09-20 `19b27fc` 배포 (Actions run 35517508875 성공, 컨테이너 교체 중 502/503 약 1분). 외부(브라우저 UA·GET): `/` 200, `/health/self` 200, `/api/monitoring/logs/x` 404, 카드 2개 UP/running. `dashboard-app (healthy)` | 통과 | ✅ |
 
 ## 6. 수동 확인 시나리오
 ### 6-1. 배포 전 — 서버에서 템플릿 출력 확인 (읽기 전용)

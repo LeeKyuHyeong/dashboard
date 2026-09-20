@@ -4,6 +4,6 @@
 
 | 일자 | 기록 | 유형 | 우선순위 | 판정 |
 |---|---|---|---|---|
-| 2026-09-20 | [로그 조회 대상 검증 + HEALTHCHECK 반영](records/2026-09-20_logs-allowlist-and-healthcheck.md) | 버그 | P1 | 조건부 |
+| 2026-09-20 | [로그 조회 대상 검증 + HEALTHCHECK 반영](records/2026-09-20_logs-allowlist-and-healthcheck.md) | 버그 | P1 | 수용 가능 |
 | 2026-09-17 | [itsm 카드 시드를 운영에 맞춤(숨김·NULL)](records/2026-09-17_itsm-card-hidden-seed.md) | 수정 | P2 | 수용 가능 |
 | 2026-09-17 | [Account 카드 썸네일 추가](records/2026-09-17_account-thumbnail.md) | 수정 | P3 | 조건부 |
