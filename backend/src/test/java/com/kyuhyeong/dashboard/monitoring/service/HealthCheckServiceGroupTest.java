@@ -38,7 +38,8 @@ class HealthCheckServiceGroupTest {
             }
             if (command.contains("inspect")) {
                 String out = containers.stream()
-                        .map(c -> "/" + c[0] + "\t" + c[1] + "\t" + c[2])
+                        // 4번째 칸은 HEALTHCHECK 결과 — 이 테스트의 컨테이너들은 HEALTHCHECK 없음(none)
+                        .map(c -> "/" + c[0] + "\t" + c[1] + "\t" + c[2] + "\tnone")
                         .reduce("", (a, b) -> a + b + "\n");
                 return new Result(true, false, 0, out, "");
             }

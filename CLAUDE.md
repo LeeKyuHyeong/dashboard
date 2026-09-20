@@ -64,7 +64,7 @@ npm run lint      # eslint
 # 백엔드 — backend/
 ./gradlew build   # 컴파일(+테스트)
 ./gradlew bootJar # 실행 jar → build/libs/*.jar
-./gradlew test    # 테스트 — 판정 규칙 단위 테스트(그룹 해석 · 전이) 13건
+./gradlew test    # 테스트 — 판정 규칙(그룹 해석 · 전이 · HEALTHCHECK) + 로그 조회 대상 검증
 ```
 
 ### 배포 (CI/CD)
@@ -257,7 +257,7 @@ quiz 는 2026-09-08 무중단 배포 도입으로 `quiz-app` 이 사라지고 `q
   설정도 전이 로그도 흔들리지 않는다.
 - **멤버 이름(`quiz-app-blue` 등)을 `expected` 에 직접 넣지 말 것** — 대기 색이 영구 DOWN 으로
   잡혀 이상 판정이 상시 켜진다. 기동 로그가 이 실수를 경고한다.
-- 판정: 멤버 중 **하나라도 running 이면 UP** / 다 있는데 아무도 안 돌면 DOWN / 하나도 없으면 MISSING.
+- 판정: 대표 컨테이너가 **running 이고 unhealthy 가 아니면 UP** / 멤버는 있는데 그렇지 않으면 DOWN / 하나도 없으면 MISSING.
 - 대표 컨테이너: running 우선, 동률이면 **최근 기동** 쪽. 드레인 30초 동안 두 색이 같이 떠 있는데,
   워크플로가 nginx upstream 을 먼저 전환하고 구 색을 나중에 정지하므로 그때 트래픽을 받는 쪽은
   새 색이다. 활성 색의 진짜 근거는 `/etc/nginx/conf.d/quiz-upstream.conf` 지만 **다른 컨테이너의
@@ -294,8 +294,8 @@ HTTP 폴링은 하지 않는다. 공개 도메인 폴링은 nginx·TLS·라우�
 
 | 상태 | 의미 |
 |---|---|
-| `UP` | 컨테이너 running |
-| `DOWN` | 컨테이너는 있는데 running 이 아님 |
+| `UP` | 컨테이너 running 이고 HEALTHCHECK 가 unhealthy 가 아님 (HEALTHCHECK 가 없으면 running 만 본다. `starting` 은 UP — 배포 때마다 이상 전이가 찍히지 않게) |
+| `DOWN` | 컨테이너는 있는데 running 이 아님, **또는 running 인데 HEALTHCHECK 가 unhealthy**. 어느 쪽인지는 `dockerStatus`(`exited` / `unhealthy`)로 구분한다 |
 | `MISSING` | docker 조회는 됐는데 그 이름이 없음 = 삭제됨 |
 | `UNKNOWN` | **docker 조회 자체가 실패** = 판정 불가. UP 으로도 DOWN 으로도 위장하지 않는다 |
 
@@ -350,6 +350,10 @@ GET /api/monitoring/health/self
 location ^~ /api/monitoring/logs { return 404; }
 ```
 
+앱은 감시 대상(`expected` + 그룹 멤버)의 실제 컨테이너 이름만 받고 나머지는 docker 를 실행하지 않고 404 다
+(2026-09-20 — 이름을 그대로 넘기면 아무 컨테이너 로그나 읽히고 `-f` 같은 값이 docker 옵션이 된다).
+**이 검사는 인증이 아니다** — nginx 차단을 대신하지 않는다.
+
 관리 IP 만 허용하려면 이 줄을 `allow`/`deny` 블록 + `proxy_pass` 로 교체한다.
 **앱 레벨 인증 분리는 2단계.** 앱 코드만 보고 노출 여부를 판단하지 말 것 — 실제 상태는
 `cat /etc/nginx/conf.d/dashboard.conf` 로 확인한다.
@@ -376,7 +380,7 @@ location ^~ /api/monitoring/logs { return 404; }
 - 유형: 본인 작성·운영 중. 전역 onboarding §1 특성 테스트 절차 해당 없음.
 - 기술 스택: 위 "기술 스택". Spring Boot(Java 17) + React/Vite 를 하나의 jar 로 배포
 - 빌드: 백엔드 `backend/` `./gradlew build` · 프론트 `frontend/` `npm run build` + `npm run lint`. 운영과 같은 결합 산출물은 루트 `Dockerfile`
-- 전체 테스트: `backend/` `./gradlew test` — 2026-09-16 기준 `@Test` 14건(판정 규칙 13 + `contextLoads` 1, `@ActiveProfiles("dev")` H2). 프론트는 테스트 러너 없음(`npm run lint` 만)
+- 전체 테스트: `backend/` `./gradlew test` — 2026-09-20 기준 `@Test` 26건(판정 규칙·로그 검증 25 + `contextLoads` 1, `@ActiveProfiles("dev")` H2). 프론트는 테스트 러너 없음(`npm run lint` 만)
 - 부분 테스트: `./gradlew test --tests "TransitionServiceTest"`
 - 로컬 실행: 위 "로컬 개발"(백엔드 dev 프로파일 필수 + Vite 5173)
 - 사용자 시나리오 검증 방식: 수동 체크리스트(브라우저). 실제 컨테이너 상태·SSE·Docker 로그는 로컬에서 재현 불가(운영 docker.sock 필요) → 운영 반영 후 🙋

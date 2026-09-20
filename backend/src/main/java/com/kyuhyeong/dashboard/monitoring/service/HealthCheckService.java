@@ -68,8 +68,22 @@ public class HealthCheckService {
         });
     }
 
-    /** 컨테이너 1건의 실측 상태. */
-    public record ContainerState(String name, String dockerStatus, Instant startedAt) {}
+    /**
+     * 컨테이너 1건의 실측 상태.
+     *
+     * @param health HEALTHCHECK 결과(healthy / unhealthy / starting). HEALTHCHECK 가 없는 컨테이너는 none.
+     */
+    public record ContainerState(String name, String dockerStatus, Instant startedAt, String health) {
+
+        /**
+         * 떠 있기만 해서는 UP 이 아니다 — HEALTHCHECK 가 unhealthy 를 보고하면 DOWN 이다.
+         * starting 은 UP 으로 본다: quiz 는 배포마다 새 색이 start_period(60초) 동안 starting 이라,
+         * 이상으로 보면 배포할 때마다 전이가 찍힌다. HEALTHCHECK 가 없으면(none) 이전처럼 running 만 본다.
+         */
+        public boolean up() {
+            return "running".equals(dockerStatus) && !"unhealthy".equals(health);
+        }
+    }
 
     /**
      * 한 사이클의 docker 실측 결과.
@@ -112,7 +126,7 @@ public class HealthCheckService {
         for (String name : monitoringProperties.getExpected()) {
             // 그룹이면 멤버 중 하나라도 running 이어야 UP. 대기 색이 Exited 인 것은 이상이 아니다.
             expectedStates.put(name, resolve(name, snapshot)
-                    .map(state -> "running".equals(state.dockerStatus()) ? "UP" : "DOWN")
+                    .map(state -> state.up() ? "UP" : "DOWN")
                     .orElse("MISSING"));
         }
 
@@ -151,7 +165,10 @@ public class HealthCheckService {
 
         List<String> cmd = new ArrayList<>(List.of(
                 "docker", "inspect", "--format",
-                "{{.Name}}\t{{.State.Status}}\t{{.State.StartedAt}}"));
+                // Health 는 HEALTHCHECK 가 없는 컨테이너에서 nil 이다. 가드 없이 읽으면 템플릿이 에러를 내고
+                // 그 컨테이너의 행이 빠져 MISSING 으로 오판된다.
+                "{{.Name}}\t{{.State.Status}}\t{{.State.StartedAt}}\t"
+                        + "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}"));
         cmd.addAll(names);
 
         // 일부 이름이 그사이 사라지면 exit 1 이지만 나머지는 stdout 에 그대로 나온다.
@@ -160,14 +177,14 @@ public class HealthCheckService {
         Map<String, ContainerState> byName = new HashMap<>();
         for (String line : detail.lines()) {
             String[] f = line.split("\t");
-            if (f.length != 3) continue;
+            if (f.length != 4) continue;
             Instant startedAt = null;
             try {
                 startedAt = Instant.parse(f[2]);
             } catch (Exception ignored) {
                 // 한 번도 기동한 적 없는 컨테이너는 0001-01-01T00:00:00Z 같은 값이 온다
             }
-            byName.put(f[0].replaceFirst("^/", ""), new ContainerState(f[0].replaceFirst("^/", ""), f[1], startedAt));
+            byName.put(f[0].replaceFirst("^/", ""), new ContainerState(f[0].replaceFirst("^/", ""), f[1], startedAt, f[3]));
         }
         return new DockerSnapshot(true, byName);
     }
@@ -209,8 +226,10 @@ public class HealthCheckService {
                 dockerStatus = "none";
             } else {
                 actualName = state.name();
-                dockerStatus = state.dockerStatus();
-                status = "running".equals(dockerStatus) ? "UP" : "DOWN";
+                // DOWN 은 "멈췄다"와 "떠 있는데 unhealthy" 를 합친 것이다. 어느 쪽인지는 이 칸으로 구분한다.
+                boolean unhealthy = "running".equals(state.dockerStatus()) && !state.up();
+                dockerStatus = unhealthy ? "unhealthy" : state.dockerStatus();
+                status = state.up() ? "UP" : "DOWN";
                 if (state.startedAt() != null) {
                     uptimeSeconds = Duration.between(state.startedAt(), Instant.now()).getSeconds();
                     if (uptimeSeconds < 0) uptimeSeconds = 0;

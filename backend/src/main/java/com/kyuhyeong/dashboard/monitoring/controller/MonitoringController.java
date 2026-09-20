@@ -46,6 +46,12 @@ public class MonitoringController {
             @PathVariable String containerName,
             @RequestParam(defaultValue = "100") int tail
     ) {
+        // 감시 대상의 실제 컨테이너 이름만 받는다. 그대로 넘기면 호스트의 아무 컨테이너 로그나 읽을 수 있고,
+        // "-f" 같은 값은 docker 옵션으로 해석된다. nginx 차단은 이 검사를 대신하지 않는다.
+        if (!props.watchedContainerNames().contains(containerName)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("로그를 볼 수 없는 대상입니다.");
+        }
+
         int safeTail = Math.max(1, Math.min(tail, MAX_LOG_TAIL));
         DockerCli.Result result = docker.exec(
                 List.of("docker", "logs", "--tail", String.valueOf(safeTail), containerName),
