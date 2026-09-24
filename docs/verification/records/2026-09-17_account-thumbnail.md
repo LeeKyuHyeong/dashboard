@@ -2,7 +2,7 @@
 - 일자: 2026-09-17
 - 유형: 수정
 - 우선순위: P3 (이미지·시드 값)
-- 판정: 조건부 (운영 DB UPDATE 와 화면 확인은 🙋)
+- 판정: 수용 가능 — 운영 DB UPDATE·서빙·화면 확인 ✅ (2026-09-25, records/2026-09-25_verification-docs-setup §5)
 
 ## 1. 요청과 목적
 - 사용자가 원한 것: NHN 지원용으로 찍은 account 앱 캡처 3장을 dashboard 의 Account 카드 썸네일로 사용
@@ -12,8 +12,8 @@
 ## 2. Acceptance Criteria
 | # | 구분 | 조건 | 상태 | 근거 |
 |---|---|---|---|---|
-| 1 | 정상 | 메인 프로젝트 탭의 Account 카드에 세 화면(홈·영수증·영수증 확인)이 보인다 | 🙋 | 배포 + 운영 DB UPDATE 후 브라우저 확인 |
-| 2 | 정상 | 새 썸네일이 jar 정적 자원으로 서빙된다(`/thumbnails/account.png` 200) | 🙋 | 배포 후 GET |
+| 1 | 정상 | 메인 프로젝트 탭의 Account 카드에 세 화면(홈·영수증·영수증 확인)이 보인다 | ✅ | 2026-09-25 브라우저 확인 — 세 화면 나란히, 상하 잘림 자연스러움 |
+| 2 | 정상 | 새 썸네일이 jar 정적 자원으로 서빙된다(`/thumbnails/account.png` 200) | ✅ | 2026-09-25 `GET /thumbnails/account.png` → 200, 134,053 bytes |
 | 3 | 연쇄 | dev(H2) 시드가 새 값으로 적재된다 | ✅ | `./gradlew test` contextLoads 통과(`data-h2.sql` 실행) |
 | 4 | 연쇄 | 다른 카드(ITSM·Song Quiz)는 변경 없음 | ✅ | 시드 diff 가 account 행 1곳씩 |
 
@@ -31,15 +31,15 @@
 |---|---|---|---|
 | 이미지 | 생성 결과를 열어 확인 | 3화면 배치·잘림 없음 | ✅ |
 | 전체 회귀 | `backend/` `./gradlew test --no-daemon` | 14 tests (1+5+8), 0 failures | ✅ |
-| 빌드(결합) | 루트 `Dockerfile` | CI 에서 수행 | 🙋 (deploy.yml 결과) |
-| 사용자 시나리오 | 아래 6번 | 확인 대기 | 🙋 |
+| 빌드(결합) | 루트 `Dockerfile` | CI 에서 수행 | ⬜ — 로컬 미실행, CI 성공에 의존 (O-008) |
+| 사용자 시나리오 | 아래 6번 | 통과 (2026-09-25) | ✅ |
 
 ## 6. 수동 확인 시나리오
 1. [전제] `main` push 로 배포 완료(Actions 성공, `/api/monitoring/health/self` 200)
 2. [행동] 운영 DB: `UPDATE project SET thumbnail_url='/thumbnails/account.png', updated_at=NOW() WHERE slug='account';`
 3. [행동] 브라우저(브라우저 UA)로 https://kyuhyeong.com 프로젝트 탭
 4. [기대 결과] Account 카드 상단 160px 에 세 화면이 나란히 보이고 상하 잘림이 어색하지 않음. `https://kyuhyeong.com/thumbnails/account.png` 200
-- 결과: ☐ 통과 ☐ 실패
+- 결과: ☑ 통과 (2026-09-25) — 2·3번은 이미 반영돼 있었다: `GET /api/projects` 의 account 행이 `thumbnailUrl=/thumbnails/account.png`. 4번 화면·200 확인
 
 ## 7. checklist 점검
 - 점검함: 영향 범위(사용처 1곳), 운영 데이터 주인은 DB(시드는 기준값)
@@ -49,7 +49,8 @@
 - 없음
 
 ## 9. 미검증 영역과 남은 위험
-- 카드 폭이 넓은 화면(3열 그리드)에서 `cover` 크롭 정도는 실제 화면에서만 확인 가능 → 시나리오 4
+- 카드 폭이 넓은 화면(3열 그리드)에서 `cover` 크롭 정도는 실제 화면에서만 확인 가능 → **O-007 로 이관**. 현재 공개 카드가 2개(itsm 숨김)라 3열이 만들어지지 않는다
+- 결합 빌드 로컬 미실행 → **O-008 로 이관**
 
 ## 10. Regression 등록
-- 없음
+- 없음 (이미지·시드 값 변경, 로직 버그 아님)
