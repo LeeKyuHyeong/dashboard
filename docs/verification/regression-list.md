@@ -18,4 +18,6 @@
 | R-009 | Monitoring | `starting` 은 UP — 배포 때마다 이상 전이가 찍히지 않는다 | `HealthCheckServiceHealthTest#starting_은_UP_으로_본다_배포_때마다_이상_전이가_찍히지_않게` | records/2026-09-20 C2-4 | 2026-09-20 |
 | R-010 | Monitoring | 그룹 해석에서 대기 색이 Exited 여도 활성 색이 healthy 면 UP | `HealthCheckServiceHealthTest#대기_색이_Exited_여도_활성_색이_healthy_면_UP` + `HealthCheckServiceGroupTest` 5건 | records/2026-09-20 C2-5 | 2026-09-20 |
 | R-011 | Monitoring | 멈춘 컨테이너는 health 와 무관하게 DOWN, Docker 칸은 docker 상태 그대로 | `HealthCheckServiceHealthTest#멈춘_컨테이너는_health_와_무관하게_DOWN_이고_상태_칸은_docker_상태_그대로다` | records/2026-09-20 C2-6 | 2026-09-20 |
-| R-012 | Content | 숨긴 카드(`visible=FALSE`)는 목록에도 상세에도 나오지 않는다 (itsm) | **수동** — `GET /api/projects` 에 id 1 없음. 자동 테스트 없음(O-005) | records/2026-09-17_itsm-card-hidden-seed AC5 | 2026-09-17 |
+| R-012 | Content | 숨긴 카드(`visible=FALSE`)는 목록에도 상세에도 나오지 않는다 | `ProjectVisibilityTest#숨긴_프로젝트는_목록에_나오지_않는다`, `#숨긴_프로젝트는_slug_를_알아도_상세로_읽히지_않는다` (2026-09-26 수동→자동) | records/2026-09-17_itsm-card-hidden-seed AC5 | 2026-09-17 |
+| R-013 | Content | 목록은 보이는 것만 `sortOrder` 오름차순으로 돌려준다 (파생 쿼리 이름이 실제로 그렇게 해석된다) | `ProjectVisibilityTest#목록은_보이는_것만_sortOrder_순서로_돌려준다` | records/2026-09-26_project-visibility-test | 2026-09-26 |
+| R-014 | Content | `visible` 이 NULL 인 행은 목록에도 상세에도 나오지 않는다 ("모르면 감춘다", NPE 없음) | `ProjectVisibilityTest#visible_이_NULL_이면_목록에도_상세에도_나오지_않는다` | records/2026-09-26_project-visibility-test | 2026-09-26 |
