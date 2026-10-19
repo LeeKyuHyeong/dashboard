@@ -26,7 +26,7 @@
 | 6 | 예외 | `screenshotUrls` 가 비면 `thumbnailUrl` 1장으로 대체, 둘 다 없으면 섹션 숨김 | ⬜ | 코드 경로(`screenshotsOf`)만 확인. mock 으로 빈 배열 케이스 미실행 |
 | 7 | 경계 | 4장 이상이면 앞 3장만 | ⬜ | `slice(0, 3)` — 데이터 없음 |
 | 8 | 정상 | 375px 에서 헤더 세로 배치·카드 1열·갤러리 1열, 가로 스크롤 없음 | ✅ | mobile 프리셋 캡처 |
-| 9 | 연쇄 | `GET /api/projects`·`/api/projects/{slug}` 가 `screenshotUrls` 배열을 돌려준다(null·빈 문자열·파싱 실패는 `[]`) | 🙋 | JDK 17 PC 에서 `./gradlew test` + dev 기동 후 curl |
+| 9 | 연쇄 | `GET /api/projects`·`/api/projects/{slug}` 가 `screenshotUrls` 배열을 돌려준다(null·빈 문자열·파싱 실패는 `[]`) | ✅ | 배포 후 운영 curl: song-quiz·account 각 3개 경로 반환(§6-3). null/파싱 실패 분기는 코드만(⬜) |
 | 10 | 연쇄 | 운영 DB 에 `screenshot_urls` 칼럼이 없으면 JPA SELECT 가 실패해 **프로젝트 API 전체가 500** 이 된다 → 배포 전 ALTER 필수 | ✅ | §6-1 본인 실행 결과(ALTER OK, UPDATE 2행 Changed: 1) — push 가능 상태 |
 | 11 | 정상 | `npm run lint` 0 error, `npm run build` 성공 | ✅ | §5 |
 | 12 | 노출 | 로그 경로 노출 범위 변화 없음(프론트 호출처만 사라짐) | ✅ | 백엔드·nginx 미변경 |
@@ -89,7 +89,9 @@
 ### 6-3. 배포 후 Smoke
 1. [행동] `https://kyuhyeong.com/` 접속
 2. [기대 결과] 헤더(사이트명·태그라인·GitHub·실시간), 카드 2장에 썸네일·로그 버튼 없음, 상세 account·song-quiz 각 화면 3장·클릭 확대, `/api/monitoring/health/self` 200
-- 결과: ☐ 통과 ☐ 실패
+- 결과: ☑ 통과(2026-10-19 12:58 KST, 배포 run 39196875698 success 직후) ☐ 실패
+  - `health/self` 200 · 두 프로젝트 API `screenshotUrls` 3개씩 · 이미지 6개 모두 200 · 메인 카드에 썸네일·로그 없음 · 상세(메인에서 `상세 →` 로 진입) 3장 `naturalWidth > 0` · 성과 수치 `방당 최대 8인`
+  - **부수 발견**: `https://kyuhyeong.com/projects/song-quiz` 를 **직접 열면 Spring Whitelabel 404**(새로고침·링크 공유 불가). 앱 내 이동은 정상. 백엔드에 SPA 경로 포워딩이 없고 이번 변경 전부터 동일(라우팅 코드 변경 없음) → O-012
 
 ## 7. checklist 점검
 - 점검함: 호출처 검색(§4), 삭제 코드의 CSS·API 잔재, 시드 두 벌 동시 반영, CLAUDE.md 동기화, 운영 프로파일 `init.mode` 미변경, 반응형, 접근성(갤러리 버튼 aria-label·dialog role)
