@@ -13,3 +13,6 @@
 | O-006 | OPEN | Content | itsm 카드를 다시 공개할 때 운영 DB UPDATE 와 시드 두 벌(`data-h2.sql`·`data-mariadb.sql`)을 **함께** 되돌려야 한다 | itsm 앱에 시연 계정 로그인 실패 등 정리할 오류가 남아 공개 보류(본인 결정 2026-09-17) | itsm 정리 완료 후 `visible=TRUE`·`github_url` 복원을 운영·시드 동시 적용 | 2026-09-17 | |
 | O-007 | OPEN | UI | 카드 3열 그리드에서 썸네일 `object-fit:cover` 크롭 정도는 실제 화면에서만 확인 가능 | 현재 공개 카드가 2개(itsm 숨김)라 3열이 만들어지지 않는다 — O-006 이 풀려야 발생 | itsm 공개 후 넓은 화면에서 3열 배치 확인 | 2026-09-17 | |
 | O-008 | OPEN | Build | 프론트+백엔드 결합 빌드(루트 `Dockerfile` 멀티스테이지)를 로컬에서 돌린 적이 없다 — CI(`deploy.yml`) 성공에만 의존한다 | 로컬에 결합 빌드를 돌릴 이유가 없었고, 배포는 CI 가 한다 | 결합 빌드가 깨지면 CI 가 먼저 잡는다. 로컬 확인이 필요하면 루트에서 `docker build .` | 2026-09-17 | |
+| O-009 | OPEN | Backend | 2026-10-19 백엔드 변경분(엔티티·DTO·schema) 컴파일·테스트 미실행 | 회사 PC 에 JDK 17 없음(8·11) | JDK 17 PC 에서 `backend/` `./gradlew test` 26 passed 확인(records/2026-10-19 §6-2) | 2026-10-19 | |
+| O-010 | OPEN | DB | `project.screenshot_urls` 칼럼이 운영 DB 에 없다 — 칼럼 없이 배포하면 프로젝트 API 500 | 운영은 `init.mode=never` 라 schema.sql 이 안 돈다. 회사 PC 라 운영 접속 불가 | **push 전** records/2026-10-19 §6-1 SQL 실행 후 push, 배포 후 §6-3 Smoke | 2026-10-19 | |
+| O-011 | CLOSED | Content | Song Quiz 상세 갤러리 3장(멀티 방·메인 메뉴·관리자) | 본인이 직접 캡처해 전달(2026-10-19) | `frontend/public/thumbnails/song-quiz/01~03.png` 추가, 로컬 상세에서 3장 확인 | 2026-10-19 | records/2026-10-19 AC4 |

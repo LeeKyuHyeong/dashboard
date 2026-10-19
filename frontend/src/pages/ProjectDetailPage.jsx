@@ -4,27 +4,38 @@ import { fetchProject } from '../api';
 import ProjectHeader from '../components/ProjectHeader';
 import TechStackTags from '../components/TechStackTags';
 import AchievementCard from '../components/AchievementCard';
+import ScreenshotGallery from '../components/ScreenshotGallery';
+
+// 갤러리 이미지: screenshotUrls(최대 3장)가 있으면 그것, 없으면 기존 thumbnailUrl 1장으로 대체.
+// 운영 DB 에 screenshot_urls 가 아직 비어 있어도 상세가 빈 화면이 되지 않게 한다.
+function screenshotsOf(project) {
+  if (project.screenshotUrls && project.screenshotUrls.length > 0) return project.screenshotUrls;
+  return project.thumbnailUrl ? [project.thumbnailUrl] : [];
+}
 
 export default function ProjectDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const [project, setProject] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // 응답을 slug 와 함께 보관한다. 로딩 여부는 "현재 slug 의 응답이 아직 없다" 로 계산하므로
+  // effect 안에서 setState 를 직접 부를 필요가 없고(react-hooks/set-state-in-effect),
+  // slug 가 바뀐 뒤 늦게 도착한 이전 응답도 화면에 올라오지 않는다.
+  const [result, setResult] = useState({ slug: null, project: null, error: null });
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
+    let cancelled = false;
     fetchProject(slug)
       .then((data) => {
-        setProject(data);
-        setLoading(false);
+        if (!cancelled) setResult({ slug, project: data, error: null });
       })
       .catch(() => {
-        setError('프로젝트를 불러오지 못했습니다.');
-        setLoading(false);
+        if (!cancelled) setResult({ slug, project: null, error: '프로젝트를 불러오지 못했습니다.' });
       });
+    return () => { cancelled = true; };
   }, [slug]);
+
+  const loading = result.slug !== slug;
+  const project = loading ? null : result.project;
+  const error = loading ? null : result.error;
 
   if (loading) {
     return (
@@ -60,6 +71,7 @@ export default function ProjectDetailPage() {
       </button>
 
       <ProjectHeader project={project} />
+      <ScreenshotGallery images={screenshotsOf(project)} name={project.name} />
       <TechStackTags techStack={project.techStack} />
 
       {project.achievements && project.achievements.length > 0 && (

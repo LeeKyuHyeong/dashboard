@@ -4,6 +4,14 @@ import useMonitoringStore from '../stores/useMonitoringStore';
 import { fetchProjects } from '../api';
 import MetricCard from '../components/MetricCard';
 import ProjectCard from '../components/ProjectCard';
+import { GitHubIcon } from '../components/icons';
+
+// 상단 소개. 자기소개 섹션은 두지 않는다 — 프로젝트가 곧 자기소개 (CLAUDE.md).
+const SITE = {
+  title: 'kyuhyeong.com',
+  tagline: '직접 만들고 운영 중인 서비스들 — 지금 이 순간의 상태 그대로',
+  githubUrl: 'https://github.com/LeeKyuHyeong',
+};
 
 export default function MainPage() {
   useSSE();
@@ -29,10 +37,18 @@ export default function MainPage() {
   return (
     <div className="container">
       <header className="page-header">
-        <h1 className="page-header__title">대시보드</h1>
-        <div className="page-header__status">
-          <span className={`status-dot ${connected ? 'status-dot--connected' : 'status-dot--disconnected'}`} />
-          {connected ? '실시간' : '연결 끊김'}
+        <div className="page-header__intro">
+          <h1 className="page-header__title">{SITE.title}</h1>
+          <p className="page-header__tagline">{SITE.tagline}</p>
+        </div>
+        <div className="page-header__side">
+          <a href={SITE.githubUrl} target="_blank" rel="noopener noreferrer" className="icon-link">
+            <GitHubIcon /> GitHub
+          </a>
+          <div className="page-header__status">
+            <span className={`status-dot ${connected ? 'status-dot--connected' : 'status-dot--disconnected'}`} />
+            {connected ? '실시간' : '연결 끊김'}
+          </div>
         </div>
       </header>
 

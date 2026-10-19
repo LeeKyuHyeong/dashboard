@@ -13,6 +13,7 @@ public record ProjectDetailDto(
         String demoUrl,
         String githubUrl,
         String thumbnailUrl,
+        List<String> screenshotUrls,
         List<AchievementDto> achievements
 ) {
     public static ProjectDetailDto from(Project p) {
@@ -29,6 +30,7 @@ public record ProjectDetailDto(
                 p.getDemoUrl(),
                 p.getGithubUrl(),
                 p.getThumbnailUrl(),
+                ProjectListDto.parseStringList(p.getScreenshotUrls()),
                 achievements
         );
     }

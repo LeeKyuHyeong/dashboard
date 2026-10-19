@@ -14,7 +14,8 @@ public record ProjectListDto(
         List<String> techStack,
         String demoUrl,
         String githubUrl,
-        String thumbnailUrl
+        String thumbnailUrl,
+        List<String> screenshotUrls
 ) {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -27,11 +28,17 @@ public record ProjectListDto(
                 parseTechStack(p.getTechStack()),
                 p.getDemoUrl(),
                 p.getGithubUrl(),
-                p.getThumbnailUrl()
+                p.getThumbnailUrl(),
+                parseStringList(p.getScreenshotUrls())
         );
     }
 
     static List<String> parseTechStack(String json) {
+        return parseStringList(json);
+    }
+
+    /** JSON 문자열 배열 → List. null·빈 문자열·파싱 실패는 모두 빈 목록(화면이 섹션을 숨긴다). */
+    static List<String> parseStringList(String json) {
         if (json == null || json.isBlank()) {
             return List.of();
         }

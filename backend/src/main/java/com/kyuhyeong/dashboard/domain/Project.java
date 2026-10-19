@@ -39,6 +39,10 @@ public class Project {
     @Column(name = "thumbnail_url")
     private String thumbnailUrl;
 
+    /** 상세 갤러리 스크린샷 URL 배열(JSON, 최대 3장 — 초과분은 화면이 자른다). 비면 화면은 thumbnailUrl 1장으로 대체. */
+    @Column(name = "screenshot_urls", columnDefinition = "JSON")
+    private String screenshotUrls;
+
     @Column(name = "sort_order")
     private Integer sortOrder;
 

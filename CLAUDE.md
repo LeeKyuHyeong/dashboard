@@ -77,16 +77,17 @@ npm run lint      # eslint
 
 ### 메인 페이지 (`/`) — 탭 2개
 
-1. **프로젝트 탭** — 프로젝트당 **통합 카드 1개**. 프로젝트 소개(썸네일/이름/설명/기술 태그)와 라이브 상태(상태 뱃지/Docker/가동시간/로그 버튼)를 합쳐서 보여주고 `[상세 →]` 로 상세 페이지 이동.
+1. **프로젝트 탭** — 프로젝트당 **통합 카드 1개**. 프로젝트 소개(이름/설명/기술 태그)와 라이브 상태(상태 뱃지/Docker/가동시간), Live·GitHub 링크를 합쳐서 보여주고 `[상세 →]` 로 상세 페이지 이동. **카드에 썸네일은 없다**(2026-10-19 — 카드 크기로 줄이면 무슨 화면인지 알아볼 수 없어 제거, 스크린샷은 상세 갤러리에서). 상단 헤더는 사이트명·한 줄 태그라인·GitHub 링크·실시간 표시(`MainPage.jsx` 의 `SITE` 상수).
 2. **서버 메트릭 탭** — CPU / Memory / Disk 카드 3개.
 
-> 서비스 상태와 프로젝트는 같은 대상(Song Quiz/Account)이라 카드를 하나로 통합했다. SSE 서비스 상태(`projectSlug`)와 프로젝트(`slug`)를 **slug 기준으로 join** 한다. 상태가 없는 프로젝트는 뱃지·로그 버튼을 자동으로 숨긴다.
+> 서비스 상태와 프로젝트는 같은 대상(Song Quiz/Account)이라 카드를 하나로 통합했다. SSE 서비스 상태(`projectSlug`)와 프로젝트(`slug`)를 **slug 기준으로 join** 한다. 상태가 없는 프로젝트는 뱃지·상태 지표를 자동으로 숨긴다. 로그 버튼은 2026-10-19 에 프론트에서 제거했다(운영 nginx 가 경로를 차단해 안내 문구만 뜨던 상태).
 
 ### 상세 페이지 (`/projects/:slug`)
 
 1. **ProjectHeader** — 뒤로가기 + 프로젝트명 + 설명 + Live demo/GitHub 링크 버튼
-2. **TechStackTags** — 기술 스택 태그 목록 (DB JSON에서 조회)
-3. **AchievementList** — 주요 성과 카드 리스트 (번호 + 제목 + 설명 + 선택적 정량 수치)
+2. **ScreenshotGallery** — `screenshot_urls` 최대 3장(초과분은 화면이 자른다). 클릭하면 원본 크기 확대(←/→ 이동, ESC·배경 클릭 닫기). 비어 있으면 `thumbnail_url` 1장으로 대체, 둘 다 없으면 섹션 자체를 숨긴다
+3. **TechStackTags** — 기술 스택 태그 목록 (DB JSON에서 조회)
+4. **AchievementList** — 주요 성과 카드 리스트 (번호 + 제목 + 설명 + 선택적 정량 수치)
 
 ---
 
@@ -105,7 +106,8 @@ npm run lint      # eslint
 | tech_stack | JSON | 기술 스택 배열 ["Spring Boot", "React", ...] |
 | demo_url | VARCHAR | Live demo 링크 |
 | github_url | VARCHAR | GitHub 레포 링크 |
-| thumbnail_url | VARCHAR | 카드 썸네일 이미지 |
+| thumbnail_url | VARCHAR | 대표 이미지 1장. 카드에는 더 이상 안 그린다(2026-10-19) — 갤러리 대체용·OG 이미지 후보 |
+| screenshot_urls | JSON | 상세 갤러리 이미지 배열(최대 3장) `["/thumbnails/account/01.png", ...]`. 2026-10-19 추가 — **운영 DB 는 수동 ALTER 필요**(schema.sql 은 prod 에서 안 돈다) |
 | sort_order | INT | 정렬 순서 |
 | visible | BOOLEAN | 대시보드 노출 여부 (false면 목록 API에서 제외) |
 | created_at | TIMESTAMP | |
@@ -171,7 +173,7 @@ SSE /api/monitoring/stream
 ```
 GET /api/monitoring/logs/{containerName}?tail=100
 → 특정 컨테이너의 최근 로그 조회 (tail 100줄)
-→ 서비스 카드의 "로그 보기" 버튼 클릭 시 모달로 표시
+→ **프론트 호출처 없음** (2026-10-19 로그 버튼·LogModal 제거). 엔드포인트와 허용 목록 검사는 유지, 운영은 nginx 차단
 ```
 
 ---
@@ -181,12 +183,12 @@ GET /api/monitoring/logs/{containerName}?tail=100
 ```
 App (React Router)
 ├── MainPage (/)                      # 탭: [프로젝트] [서버 메트릭]
-│   ├── ProjectCard ×N               # 통합 카드 = 프로젝트 소개 + 라이브 상태(slug join)
-│   │   └── LogModal                 # 카드의 '로그' 클릭 시. nginx 차단이면 안내 문구
+│   ├── ProjectCard ×N               # 통합 카드 = 프로젝트 소개 + 라이브 상태(slug join). 썸네일 없음
 │   └── MetricCard ×3 (CPU, Memory, Disk)
 │
 └── ProjectDetailPage (/projects/:slug)
     ├── ProjectHeader (이름, 설명, demo/github 링크)
+    ├── ScreenshotGallery (screenshotUrls 최대 3장 + 확대 보기)
     ├── TechStackTags (JSON → 태그 리스트)
     └── AchievementCard ×N (제목, 설명, 수치)
 ```
@@ -263,7 +265,7 @@ quiz 는 2026-09-08 무중단 배포 도입으로 `quiz-app` 이 사라지고 `q
   새 색이다. 활성 색의 진짜 근거는 `/etc/nginx/conf.d/quiz-upstream.conf` 지만 **다른 컨테이너의
   파일이라 대시보드가 읽을 수 없다** — 기동 시각이 최선의 근사다.
 - `ServiceStatus.containerName` 은 **해석된 실제 이름**(`quiz-app-green`)을 담는다. 논리 이름을
-  그대로 내보내면 `docker logs quiz-app` 이 실패해 로그 버튼이 깨진다.
+  그대로 내보내면 `docker logs quiz-app` 이 실패한다(로그 API 허용 목록도 실제 이름 기준).
 - unexpected 비교는 그룹을 멤버로 펼쳐서 한다. 안 펼치면 활성 색이 매번 "목록에 없는데 실행 중"
   으로 잘못 경고된다.
 
@@ -363,6 +365,7 @@ location ^~ /api/monitoring/logs { return 404; }
 ## 프로젝트 관리 방침
 
 - 프로젝트 콘텐츠(project, project_achievement)는 DB 직접 수정 (관리자 API 없음)
+- 스크린샷 파일은 `frontend/public/thumbnails/<slug>/01.png …` 에 두고 DB `screenshot_urls` 에 경로 배열을 적는다(이미지는 jar 에 포함돼 배포, 경로는 DB). 포트폴리오용이므로 **무슨 화면인지 한눈에 읽히는 크기·구도**로 캡처한다
 - ⚠️ **운영(mariadb) 프로필은 `spring.sql.init.mode: never`** — `always` 였을 때 기동마다 seed 가 재실행돼 운영 중 DELETE 한 행(kh-shop)이 부활하는 사고 발생(2026-07-23). **운영 데이터의 주인은 DB**, `data-mariadb.sql` 은 최초 구축 시 수동 실행용 기준값일 뿐이다. dev(h2) 프로필은 인메모리라 `always` 유지.
 - 모니터링 데이터는 인메모리 관리 (DB 저장 안 함, 서버 재시작 시 초기화)
 - Docker 컨테이너 매핑은 yaml 설정 파일로 관리
