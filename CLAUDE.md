@@ -37,7 +37,7 @@ ITSM 숨김: `project.visible=false`(프로젝트 카드 제외) + `application.
 
 ## 개발 · 빌드 · 배포
 
-**단일 아티팩트 구조 (핵심)**: 프론트(Vite)와 백엔드(Spring Boot)는 배포 시 **하나의 jar**로 합쳐진다. `Dockerfile` 멀티스테이지가 프론트를 빌드해 `dist` 를 백엔드 `src/main/resources/static` 에 복사한 뒤 `bootJar` 로 패키징 → 운영에선 Spring Boot 하나가 **8080에서 SPA와 `/api` 를 같은 오리진으로** 서빙한다(별도 웹서버·CORS 불필요). Docker 상태는 docker-java 가 아니라 **docker CLI 서브프로세스**(`ProcessBuilder`)로 조회한다(런타임 이미지에 `docker-cli` 설치).
+**단일 아티팩트 구조 (핵심)**: 프론트(Vite)와 백엔드(Spring Boot)는 배포 시 **하나의 jar**로 합쳐진다. `Dockerfile` 멀티스테이지가 프론트를 빌드해 `dist` 를 백엔드 `src/main/resources/static` 에 복사한 뒤 `bootJar` 로 패키징 → 운영에선 Spring Boot 하나가 **8080에서 SPA와 `/api` 를 같은 오리진으로** 서빙한다(별도 웹서버·CORS 불필요). **SPA 경로 fallback** 은 `SpaFallbackConfig`(정적 리소스 핸들러에 "파일이 없고 `/api/**` 도 아니고 확장자도 없으면 `index.html`" 규칙) — 2026-10-19 까지 이게 없어서 상세 URL 새로고침·링크 공유가 Spring 404 였다(O-012). 컨트롤러 catch-all 로 만들지 말 것: 컨트롤러가 정적 핸들러보다 우선이라 `/assets/*.js` 까지 가로챈다. Docker 상태는 docker-java 가 아니라 **docker CLI 서브프로세스**(`ProcessBuilder`)로 조회한다(런타임 이미지에 `docker-cli` 설치).
 
 ### 로컬 개발
 
@@ -383,7 +383,7 @@ location ^~ /api/monitoring/logs { return 404; }
 - 유형: 본인 작성·운영 중. 전역 onboarding §1 특성 테스트 절차 해당 없음.
 - 기술 스택: 위 "기술 스택". Spring Boot(Java 17) + React/Vite 를 하나의 jar 로 배포
 - 빌드: 백엔드 `backend/` `./gradlew build` · 프론트 `frontend/` `npm run build` + `npm run lint`. 운영과 같은 결합 산출물은 루트 `Dockerfile`
-- 전체 테스트: `backend/` `./gradlew test` — 2026-09-20 기준 `@Test` 26건(판정 규칙·로그 검증 25 + `contextLoads` 1, `@ActiveProfiles("dev")` H2). 프론트는 테스트 러너 없음(`npm run lint` 만)
+- 전체 테스트: `backend/` `./gradlew test` — 2026-10-19 기준 `@Test` 32건(판정 규칙·로그 검증 25 + `contextLoads` 1 + `SpaFallbackTest` 6, `@ActiveProfiles("dev")` H2). `src/test/resources/static/` 은 SPA fallback 테스트용 더미(운영 static 은 Dockerfile 이 채움). 프론트는 테스트 러너 없음(`npm run lint` 만)
 - 부분 테스트: `./gradlew test --tests "TransitionServiceTest"`
 - 로컬 실행: 위 "로컬 개발"(백엔드 dev 프로파일 필수 + Vite 5173)
 - 사용자 시나리오 검증 방식: 수동 체크리스트(브라우저). 실제 컨테이너 상태·SSE·Docker 로그는 로컬에서 재현 불가(운영 docker.sock 필요) → 운영 반영 후 🙋

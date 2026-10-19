@@ -22,3 +22,4 @@
 | R-013 | Content | 목록은 보이는 것만 `sortOrder` 오름차순으로 돌려준다 (파생 쿼리 이름이 실제로 그렇게 해석된다) | `ProjectVisibilityTest#목록은_보이는_것만_sortOrder_순서로_돌려준다` | records/2026-09-26_project-visibility-test | 2026-09-26 |
 | R-014 | Content | `visible` 이 NULL 인 행은 목록에도 상세에도 나오지 않는다 ("모르면 감춘다", NPE 없음) | `ProjectVisibilityTest#visible_이_NULL_이면_목록에도_상세에도_나오지_않는다` | records/2026-09-26_project-visibility-test | 2026-09-26 |
 | R-015 | Content/UI | 상세에서 slug 가 바뀐 뒤 늦게 도착한 이전 프로젝트 응답이 화면에 올라오지 않는다 (응답을 slug 와 함께 보관, 언마운트 시 취소) | 수동: 느린 네트워크로 `/projects/song-quiz` → 즉시 `뒤로` → `/projects/account` 진입, account 가 보여야 함 | records/2026-10-19 §8 | 2026-10-19 |
+| R-016 | Routing | 비-API·비-파일 경로는 `index.html`, 실제 파일은 그 파일, `/api/**` 미매핑·없는 파일은 404 (SPA fallback 세 경계) | `SpaFallbackTest` 6건 | records/2026-10-19_spa-fallback-deep-link | 2026-10-19 |
