@@ -27,7 +27,7 @@
 | 7 | 경계 | 4장 이상이면 앞 3장만 | ⬜ | `slice(0, 3)` — 데이터 없음 |
 | 8 | 정상 | 375px 에서 헤더 세로 배치·카드 1열·갤러리 1열, 가로 스크롤 없음 | ✅ | mobile 프리셋 캡처 |
 | 9 | 연쇄 | `GET /api/projects`·`/api/projects/{slug}` 가 `screenshotUrls` 배열을 돌려준다(null·빈 문자열·파싱 실패는 `[]`) | 🙋 | JDK 17 PC 에서 `./gradlew test` + dev 기동 후 curl |
-| 10 | 연쇄 | 운영 DB 에 `screenshot_urls` 칼럼이 없으면 JPA SELECT 가 실패해 **프로젝트 API 전체가 500** 이 된다 → 배포 전 ALTER 필수 | 🙋 | 아래 §6-1 |
+| 10 | 연쇄 | 운영 DB 에 `screenshot_urls` 칼럼이 없으면 JPA SELECT 가 실패해 **프로젝트 API 전체가 500** 이 된다 → 배포 전 ALTER 필수 | ✅ | §6-1 본인 실행 결과(ALTER OK, UPDATE 2행 Changed: 1) — push 가능 상태 |
 | 11 | 정상 | `npm run lint` 0 error, `npm run build` 성공 | ✅ | §5 |
 | 12 | 노출 | 로그 경로 노출 범위 변화 없음(프론트 호출처만 사라짐) | ✅ | 백엔드·nginx 미변경 |
 
@@ -46,7 +46,7 @@
 - `backend/src/main/resources/schema.sql` — 칼럼 + `ALTER ... IF NOT EXISTS`
 - `CLAUDE.md` — 화면 설계·ERD·컴포넌트 트리·관리 방침·로그 서술 갱신
 - `.claude/launch.json` — 신규(로컬 Vite 미리보기용). 커밋 여부는 개발자 판단
-- DB·설정 변경: **`project.screenshot_urls TEXT` 추가**. 시드 `data-h2.sql`·`data-mariadb.sql` 두 벌에 값 반영(O-006 규칙). `application.yml` 변경 없음
+- DB·설정 변경: **`project.screenshot_urls TEXT` 추가**. `project_achievement` id 3 `metric_value` '방당 기본 8인' → '방당 최대 8인'(시드 두 벌 + 운영 UPDATE §6-1). 시드 `data-h2.sql`·`data-mariadb.sql` 두 벌에 값 반영(O-006 규칙). `application.yml` 변경 없음
 
 ## 4. 영향 범위 분석
 - 검색한 호출처와 결과:
@@ -74,9 +74,12 @@
    ALTER TABLE project ADD COLUMN IF NOT EXISTS screenshot_urls TEXT;
    UPDATE project SET screenshot_urls = '["/thumbnails/song-quiz/01.png", "/thumbnails/song-quiz/02.png", "/thumbnails/song-quiz/03.png"]' WHERE slug = 'song-quiz';
    UPDATE project SET screenshot_urls = '["/thumbnails/account/01.png", "/thumbnails/account/02.png", "/thumbnails/account/03.png"]' WHERE slug = 'account';
+   -- 문구 수정(2026-10-19 추가 요청): Song Quiz 성과 01 수치
+   UPDATE project_achievement SET metric_value = '방당 최대 8인' WHERE id = 3 AND metric_value = '방당 기본 8인';
    ```
 3. [기대 결과] `SELECT slug, screenshot_urls FROM project;` 에 두 행이 채워짐. itsm 은 NULL(숨김이라 무관)
-- 결과: ☐ 통과 ☐ 실패
+- 결과: ☑ 통과(2026-10-19, 본인 실행 — ALTER `Query OK`, UPDATE song-quiz·account 각 `Rows matched: 1 Changed: 1`) ☐ 실패
+  - `project_achievement` 문구 UPDATE(방당 최대 8인): ☑ 통과(본인 실행, `Rows matched: 1 Changed: 1`)
 
 ### 6-2. 백엔드 테스트 (JDK 17 있는 PC)
 1. [행동] `backend/` `./gradlew test`
@@ -97,7 +100,7 @@
 
 ## 9. 미검증 영역과 남은 위험
 - 백엔드 컴파일·테스트(JDK 17 없음) — 6-2 로 확인
-- 운영 DB 칼럼 미반영 상태로 push 하면 프로젝트 API 500 — **6-1 을 먼저** (O-010)
+- (해소) 운영 DB `screenshot_urls` ALTER·UPDATE 완료 — O-010 CLOSED
 - AC 6·7 대체·절단 규칙은 코드로만 확인
 
 ## 10. Regression 등록
