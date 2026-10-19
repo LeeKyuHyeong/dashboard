@@ -4,7 +4,7 @@
 
 | 일자 | 기록 | 유형 | 우선순위 | 판정 |
 |---|---|---|---|---|
-| 2026-10-19 | [상세 URL 직접 접근 404 — SPA fallback(O-012)](records/2026-10-19_spa-fallback-deep-link.md) | 버그 | P1 | 미검증 상태 |
+| 2026-10-19 | [상세 URL 직접 접근 404 — SPA fallback(O-012)](records/2026-10-19_spa-fallback-deep-link.md) | 버그 | P1 | 수용 가능 |
 | 2026-10-19 | [디자인 개편(썸네일→상세 갤러리) + 로그 버튼 제거](records/2026-10-19_design-refresh-remove-log-button.md) | 수정 | P1 | 조건부 |
 | 2026-09-26 | [숨김 프로젝트 노출 가드 자동 테스트(O-005)](records/2026-09-26_project-visibility-test.md) | 수정 | P1 | 수용 가능 |
 | 2026-09-25 | [검증 문서 체계 정비(regression-list·open-issues 신설)](records/2026-09-25_verification-docs-setup.md) | 수정 | P2 | 수용 가능 |
